@@ -1,0 +1,334 @@
+/*
+=====================================================
+    NovelWorld - Main Stylesheet (style.css)
+    Version: 2.2 (with Genre Slider)
+=====================================================
+*/
+
+/* --- متغیرهای اصلی و استایل‌های عمومی --- */
+:root {
+    --bg-color: #13110B;
+    --surface-color: #1c1a14;
+    --primary-color: #FFC107;
+    --primary-hover-color: #FFD54F;
+    --text-color: #f0f0f0;
+    --text-secondary-color: #a0a0a0;
+    --border-color: #2f2c21;
+    --font-family: 'Vazirmatn', sans-serif;
+}
+
+* { 
+    box-sizing: border-box; 
+    margin: 0; 
+    padding: 0; 
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    overflow-x: hidden;
+}
+
+a {
+    text-decoration: none;
+    color: var(--primary-color);
+}
+
+/* --- Hero Slider --- */
+.hero-slider {
+    position: relative;
+    width: 100%;
+    height: 85vh;
+    overflow: hidden;
+}
+
+.slider-container {
+    width: 100%;
+    height: 100%;
+}
+
+.slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    padding: 0 8%;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    z-index: 1;
+}
+
+.slide.active {
+    opacity: 1;
+    z-index: 2;
+}
+
+.slide-content {
+    max-width: 550px;
+    color: white;
+}
+
+.slide-title {
+    font-size: 4rem;
+    font-weight: 800;
+    text-shadow: 2px 2px 15px rgba(0,0,0,0.8);
+    margin-bottom: 20px;
+    line-height: 1.2;
+}
+
+.slide-description {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.7;
+    margin-bottom: 30px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;  
+    overflow: hidden;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    padding: 14px 30px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover-color);
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(255, 193, 7, 0.3);
+}
+
+.slider-dots {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 5;
+}
+
+.dot {
+    width: 12px;
+    height: 12px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.4s ease;
+}
+
+.dot.active {
+    background-color: var(--primary-color);
+    transform: scale(1.3);
+}
+
+/* --- Content Sections & Carousels --- */
+.content-section {
+    padding: 50px 5%;
+}
+.content-section:last-child {
+    padding-bottom: 70px; /* برای جلوگیری از همپوشانی با فوتر موبایل */
+}
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.section-title {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.view-all {
+    font-weight: 500;
+    color: var(--text-secondary-color);
+}
+.view-all:hover {
+    color: var(--primary-color);
+}
+
+.manhwa-carousel, .genre-carousel {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding-bottom: 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) var(--surface-color);
+}
+.manhwa-carousel::-webkit-scrollbar, .genre-carousel::-webkit-scrollbar { height: 8px; }
+.manhwa-carousel::-webkit-scrollbar-track, .genre-carousel::-webkit-scrollbar-track { background: var(--surface-color); border-radius: 10px; }
+.manhwa-carousel::-webkit-scrollbar-thumb, .genre-carousel::-webkit-scrollbar-thumb { background-color: var(--primary-color); border-radius: 10px; }
+
+/* --- Card UI --- */
+.manhwa-card {
+    flex: 0 0 200px;
+    background-color: var(--surface-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.manhwa-card:hover {
+    transform: translateY(-12px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+    border-color: var(--primary-color);
+}
+
+.manhwa-card a {
+    text-decoration: none;
+    color: var(--text-color);
+}
+
+.card-image-container { 
+    position: relative; 
+}
+.card-img { 
+    width: 100%; 
+    height: 280px; 
+    object-fit: cover; 
+}
+
+.card-badges {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: flex-end; /* فقط امتیاز را نشان می‌دهیم */
+}
+
+.badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    backdrop-filter: blur(5px);
+}
+
+.rating-badge {
+    background-color: rgba(255, 193, 7, 0.8);
+    color: var(--bg-color);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.card-content { 
+    padding: 15px; 
+}
+.card-title {
+    font-size: 1rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* --- استایل اسلایدر ژانر --- */
+.genre-card {
+    flex: 0 0 180px;
+    height: 100px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    color: white;
+    padding: 15px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.genre-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+}
+.genre-icon svg {
+    width: 40px;
+    height: 40px;
+}
+.genre-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-top: 5px;
+}
+
+
+/*
+=====================================================
+============== طراحی واکنش‌گرا (موبایل) ==============
+=====================================================
+*/
+@media (max-width: 800px) {
+
+    .content-section {
+        padding: 40px 5%;
+    }
+
+    /* --- Hero Slider --- */
+    .hero-slider {
+        height: 55vh;
+    }
+    .slide {
+        flex-direction: column; 
+        justify-content: center;
+        align-items: flex-start;
+        text-align: right;
+        padding: 0 8% 0 0;
+    }
+    .slide-content {
+        max-width: 75%;
+    }
+    .slide-title {
+        font-size: 2.2rem;
+    }
+    .slide-description {
+        -webkit-line-clamp: 2;
+    }
+    .slider-dots {
+        bottom: 20px;
+        left: auto;
+        right: 8%;
+        transform: none;
+    }
+    
+    /* --- عمومی --- */
+    .section-title {
+        font-size: 1.5rem;
+    }
+    .manhwa-card {
+        flex: 0 0 150px;
+    }
+    .card-img {
+        height: 210px;
+    }
+    .card-title {
+        font-size: 0.9rem;
+    }
+    .genre-card {
+        flex: 0 0 150px;
+        height: 90px;
+    }
+    .genre-icon svg {
+        width: 30px;
+        height: 30px;
+    }
+    .genre-name {
+        font-size: 1rem;
+    }
+}
