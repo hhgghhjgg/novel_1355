@@ -1,0 +1,262 @@
+/*
+=====================================================
+    NovelWorld - Detail Page Stylesheet
+    Version: 1.2 (Interactive Comments)
+=====================================================
+*/
+:root {
+    --bg-color: #13110B;
+    --surface-color: #1c1a14;
+    --primary-color: #FFC107;
+    --text-color: #f0f0f0;
+    --text-secondary-color: #a0a0a0;
+    --border-color: #2f2c21;
+    --font-family: 'Vazirmatn', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    margin: 0;
+    direction: rtl;
+}
+
+.detail-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding-bottom: 50px;
+}
+
+/* --- بخش Hero --- */
+.hero-section {
+    position: relative;
+    height: 400px;
+    background-size: cover;
+    background-position: center;
+    border-radius: 0 0 20px 20px;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+}
+.hero-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(to top, rgba(19,17,11,1) 20%, rgba(19,17,11,0.5) 70%, rgba(19,17,11,0.2) 100%);
+    backdrop-filter: blur(8px);
+}
+.hero-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    gap: 25px;
+    padding: 30px;
+    width: 100%;
+}
+.hero-cover-img {
+    width: 180px;
+    height: 260px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border: 2px solid var(--border-color);
+    flex-shrink: 0;
+}
+.type-badge {
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+.hero-title {
+    font-size: 2.8rem;
+    font-weight: 800;
+    text-shadow: 1px 1px 15px rgba(0,0,0,0.7);
+    margin: 0;
+}
+.hero-subtitle {
+    font-size: 1.2rem;
+    color: var(--text-secondary-color);
+    opacity: 0.8;
+}
+
+/* --- پنل اطلاعات --- */
+.info-panel {
+    background-color: var(--surface-color);
+    border-radius: 12px;
+    padding: 25px;
+    margin: -50px 30px 0 30px;
+    position: relative;
+    z-index: 3;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 20px;
+    text-align: center;
+    margin-bottom: 25px;
+}
+.info-item span {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary-color);
+    margin-bottom: 5px;
+}
+.info-item strong {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+.genres-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 30px;
+    border-top: 1px solid var(--border-color);
+    padding-top: 25px;
+}
+.genre-tag {
+    background-color: var(--border-color);
+    padding: 6px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+.btn { text-decoration: none; padding: 12px 25px; border-radius: 8px; font-weight: 700; transition: all 0.3s ease;}
+.btn-primary { background-color: var(--primary-color); color: var(--bg-color); }
+.btn-primary:hover { background-color: #ffd54f; }
+.btn-secondary { background-color: transparent; border: 1px solid var(--border-color); color: var(--text-color); }
+.btn-secondary:hover { background-color: var(--border-color); }
+
+/* --- سیستم تب‌بندی --- */
+.tab-system { padding: 30px; }
+.tab-links {
+    display: flex;
+    gap: 10px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 20px;
+}
+.tab-link {
+    background: none;
+    border: none;
+    color: var(--text-secondary-color);
+    font-family: var(--font-family);
+    font-size: 1.1rem;
+    font-weight: 500;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+.tab-link:hover { color: var(--text-color); }
+.tab-link.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 700;
+}
+.tab-content { display: none; line-height: 1.8; }
+.tab-content.active { display: block; }
+
+/* --- لیست چپترها و ابزارهای نویسنده --- */
+.author-actions-header { margin-bottom: 20px; }
+.btn-add-chapter {
+    display: inline-flex; align-items: center; gap: 8px; background-color: var(--primary-color);
+    color: var(--bg-color); padding: 10px 20px; border-radius: 8px;
+    text-decoration: none; font-weight: 700;
+}
+.chapter-list { list-style: none; padding: 0; }
+.chapter-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background-color: var(--surface-color); border-radius: 8px; margin-bottom: 10px;
+}
+.chapter-item a { flex-grow: 1; padding: 15px; text-decoration: none; color: var(--text-color); }
+.chapter-author-tools { display: flex; gap: 5px; padding-left: 15px; }
+.tool-btn {
+    background: none; border: 1px solid transparent; border-radius: 6px;
+    padding: 8px; cursor: pointer; line-height: 1; transition: all 0.2s ease;
+}
+.tool-btn:hover { background-color: var(--border-color); }
+
+/* --- استایل بخش نظرات --- */
+.comment-form-box {
+    background-color: var(--surface-color); padding: 20px;
+    border-radius: 12px; margin-bottom: 30px; border: 1px solid var(--border-color);
+}
+.comment-form-box h3 { margin-top: 0; margin-bottom: 15px; }
+.comment-form-box textarea {
+    width: 100%; background-color: var(--bg-color); border: 1px solid var(--border-color);
+    border-radius: 8px; padding: 12px; color: var(--text-color);
+    font-family: var(--font-family); resize: vertical; min-height: 80px;
+}
+.form-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.spoiler-box { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-secondary-color); cursor: pointer; }
+.comments-section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);
+}
+.comments-section-header select {
+    background-color: var(--surface-color); border: 1px solid var(--border-color);
+    color: var(--text-color); padding: 5px 10px; border-radius: 6px; font-family: var(--font-family);
+}
+.comment-box {
+    background-color: var(--surface-color); border-radius: 12px;
+    padding: 15px 20px; margin-bottom: 15px;
+}
+.comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.username { font-weight: 700; color: var(--text-color); }
+.timestamp { font-size: 0.8rem; color: var(--text-secondary-color); }
+.comment-body { line-height: 1.7; word-wrap: break-word; }
+.comment-body.spoiler {
+    background-color: var(--text-secondary-color); color: var(--text-secondary-color);
+    border-radius: 6px; padding: 5px; cursor: pointer; transition: all 0.2s ease; user-select: none;
+}
+.comment-body.spoiler.revealed { background-color: transparent; color: var(--text-color); cursor: default; user-select: text; }
+.author-badge {
+    background-color: var(--primary-color); color: var(--bg-color); font-size: 0.75rem;
+    padding: 2px 8px; border-radius: 10px; font-weight: 700; margin-right: 8px;
+}
+.login-prompt { text-align: center; padding: 20px; background-color: var(--surface-color); border-radius: 12px; }
+.comment-footer { margin-top: 10px; }
+.actions { display: flex; gap: 15px; align-items: center; }
+.action-btn {
+    background: none; border: none; color: var(--text-secondary-color); cursor: pointer;
+    font-family: var(--font-family); font-size: 0.9rem; display: flex; align-items: center;
+    gap: 6px; transition: all 0.2s ease;
+}
+.action-btn:hover { color: var(--text-color); }
+.action-btn svg {
+    width: 20px; height: 20px;
+    fill: currentColor; /* رنگ آیکون را با رنگ متن یکی می‌کند */
+}
+.action-btn.action-success {
+    color: var(--primary-color) !important;
+    transform: scale(1.1);
+}
+.replies-container {
+    margin-top: 15px; padding-right: 25px;
+    border-right: 2px solid var(--border-color);
+}
+.comment-box.is-reply { background-color: var(--bg-color); }
+.reply-form-box { margin-top: 15px; }
+
+/* واکنش‌گرایی */
+@media (max-width: 600px) {
+    .hero-section { height: auto; }
+    .hero-content { flex-direction: column; align-items: center; text-align: center; padding: 20px; gap: 15px; }
+    .hero-cover-img { margin-top: 30px; width: 150px; height: 220px; }
+    .hero-title { font-size: 2rem; }
+    .info-panel { margin: -50px 15px 0 15px; }
+    .tab-system { padding: 20px 15px; }
+    .form-footer { flex-direction: column; align-items: flex-start; gap: 15px;}
+    .form-footer .btn { width: 100%; text-align: center; }
+}
