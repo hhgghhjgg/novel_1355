@@ -1,0 +1,288 @@
+/*
+=====================================================
+    NovelWorld - Dashboard Stylesheet
+    Version: 1.0
+=====================================================
+*/
+
+/* --- متغیرهای رنگی اختصاصی داشبورد --- */
+:root {
+    --dash-bg: #1a1a20;
+    --dash-surface: #2a2a32;
+    --dash-border: #3a3a42;
+    --dash-text: #e0e0e0;
+    --dash-text-secondary: #a0a0a0;
+    --primary-color: #FFC107;
+    --font-family: 'Vazirmatn', sans-serif;
+}
+
+/* --- استایل‌های پایه --- */
+body.dashboard-body {
+    background-color: var(--dash-bg);
+    color: var(--dash-text);
+    font-family: var(--font-family);
+    margin: 0;
+    direction: rtl;
+    overflow-x: hidden;
+}
+
+/* --- ساختار اصلی و سایدبار --- */
+.dashboard-container {
+    display: flex;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: var(--dash-surface);
+    height: 100vh;
+    position: fixed;
+    right: 0;
+    top: 0;
+    border-left: 1px solid var(--dash-border);
+    z-index: 1001;
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+.sidebar-header {
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--dash-border);
+    flex-shrink: 0;
+}
+.sidebar-profile-link { 
+    text-decoration: none; 
+    color: var(--dash-text);
+}
+.sidebar-profile-picture {
+    width: 80px; height: 80px; border-radius: 50%; background-color: var(--primary-color);
+    color: var(--dash-bg); display: inline-flex; justify-content: center; align-items: center;
+    font-size: 2rem; font-weight: 700; margin-bottom: 10px;
+}
+.sidebar-username { 
+    font-size: 1.1rem; 
+    margin: 0; 
+}
+
+.sidebar-nav { 
+    display: flex; 
+    flex-direction: column; 
+    padding: 15px;
+    flex-grow: 1;
+}
+.sidebar-nav a {
+    padding: 12px 15px;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    color: var(--dash-text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+.sidebar-nav a:hover { 
+    background-color: var(--dash-border); 
+    color: var(--dash-text); 
+}
+.sidebar-nav a.active { 
+    background-color: var(--primary-color); 
+    color: var(--dash-bg); 
+    font-weight: 700;
+}
+
+/* --- کانتینر اصلی --- */
+.main-container {
+    flex-grow: 1;
+    margin-right: 250px;
+    transition: margin-right 0.3s ease-in-out;
+}
+.dashboard-header {
+    background-color: var(--dash-surface);
+    padding: 0 20px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--dash-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.hamburger-btn { 
+    background: none; 
+    border: none; 
+    color: var(--dash-text); 
+    cursor: pointer; 
+    padding: 10px;
+}
+.dashboard-title { 
+    font-size: 1.5rem; 
+    margin: 0 15px 0 0;
+}
+
+.dashboard-content {
+    padding: 30px;
+}
+
+/* --- استایل‌های صفحه اصلی داشبورد (index.php) --- */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.page-header h2 {
+    margin: 0;
+}
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.sort-dropdown {
+    background-color: var(--dash-surface);
+    border: 1px solid var(--dash-border);
+    color: var(--dash-text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: var(--font-family);
+}
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+}
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--dash-bg);
+    font-weight: 700;
+}
+
+.novels-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+.novel-card {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+}
+.novel-card:hover {
+    transform: translateY(-5px);
+}
+.novel-card .card-link { display: block; text-decoration: none; }
+.novel-card img {
+    width: 100%;
+    height: 280px;
+    object-fit: cover;
+    display: block;
+}
+.novel-card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 15px;
+    background: linear-gradient(to top, rgba(26,26,32,1) 30%, transparent);
+}
+.novel-card-overlay h3 {
+    color: #fff;
+    margin: 0 0 5px 0;
+    font-size: 1.1rem;
+}
+.novel-card-overlay span {
+    color: var(--dash-text-secondary);
+    font-size: 0.8rem;
+}
+.status-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: rgba(26,26,32,0.7);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: var(--dash-text);
+}
+
+.no-results-box {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 50px;
+    background-color: var(--dash-surface);
+    border-radius: 12px;
+    border: 1px dashed var(--dash-border);
+}
+
+/* --- واکنش‌گرایی --- */
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(100%); /* مخفی کردن سایدبار در موبایل */
+    }
+    .sidebar.open {
+        transform: translateX(0); /* نمایش سایدبار */
+    }
+    .main-container {
+        margin-right: 0; /* محتوا تمام صفحه را بگیرد */
+    }
+}
+
+/* --- استایل‌های فرم‌های داخل داشبورد --- */
+.form-container {
+    background-color: var(--dash-surface);
+    padding: 30px;
+    border-radius: 12px;
+}
+.form-group {
+    margin-bottom: 20px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--dash-bg);
+    border: 1px solid var(--dash-border);
+    border-radius: 8px;
+    color: var(--dash-text);
+    font-family: var(--font-family);
+    font-size: 1rem;
+}
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.2);
+}
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+.btn-secondary {
+    background-color: var(--dash-border);
+    color: var(--dash-text-secondary);
+}
+.error-box {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid #ff4d4d;
+    background-color: rgba(255, 77, 77, 0.1);
+    color: #ffcccc;
+}
+
