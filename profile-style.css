@@ -1,0 +1,97 @@
+/*
+=====================================================
+    NovelWorld - Profile Page Stylesheet (profile-style.css)
+    Version: 2.0 (Action-Oriented Design)
+=====================================================
+*/
+.profile-page {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 0 15px;
+}
+.profile-card {
+    background-color: var(--surface-color);
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+/* --- بخش هدر پروفایل --- */
+.profile-header {
+    position: relative;
+    text-align: center;
+    padding-bottom: 20px;
+}
+.profile-banner {
+    height: 150px;
+    background-image: linear-gradient(to top right, #3a2d0b, #13110B);
+}
+.profile-picture-container {
+    margin-top: -60px; /* برای روی هم افتادن عکس و بنر */
+    position: relative;
+    display: inline-block;
+}
+.profile-picture {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 3.5rem;
+    font-weight: 800;
+    border: 5px solid var(--surface-color);
+}
+.profile-info {
+    margin-top: 10px;
+}
+.profile-info h2 {
+    margin: 0 0 5px 0;
+    font-size: 1.8rem;
+    color: var(--text-color);
+}
+.profile-info p {
+    margin: 0;
+    color: var(--text-secondary-color);
+    font-size: 0.9rem;
+}
+
+/* --- بخش دکمه‌های اقدام --- */
+.profile-actions-list {
+    padding: 15px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.action-link {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text-secondary-color);
+    font-weight: 500;
+    font-size: 1rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.action-link:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+.action-link svg {
+    flex-shrink: 0;
+    stroke: currentColor;
+}
+/* استایل خاص برای دکمه خروج برای جلب توجه و جلوگیری از کلیک اشتباه */
+.action-link.logout-link {
+    color: #ff8a8a;
+}
+.action-link.logout-link:hover {
+    background-color: rgba(255, 77, 77, 0.1);
+    color: #ff4d4d;
+}
