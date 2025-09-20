@@ -1,0 +1,173 @@
+/*
+=====================================================
+    NovelWorld - Auth Page Stylesheet (auth-style.css)
+    Version: 2.0 (Split-Screen & Glassmorphism UI)
+=====================================================
+*/
+:root {
+    --bg-color: #13110B;
+    --surface-color: #1c1a14;
+    --primary-color: #FFC107;
+    --text-color: #f0f0f0;
+    --text-secondary-color: #a0a0a0;
+    --border-color: #2f2c21;
+    --font-family: 'Vazirmatn', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    margin: 0;
+    direction: rtl;
+}
+
+.auth-page-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* --- بخش نمایش (تصویر پس‌زمینه) --- */
+.auth-showcase {
+    flex-basis: 50%;
+    background-image: linear-gradient(to top right, rgba(19, 17, 11, 0.8), rgba(19, 17, 11, 0.2)), url('https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=1973&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 50px;
+    color: white;
+}
+.showcase-logo {
+    font-size: 2.5rem;
+    font-weight: 800;
+}
+.showcase-logo span { color: var(--primary-color); }
+.showcase-text {
+    font-size: 1.2rem;
+    margin-top: 15px;
+    line-height: 1.7;
+    max-width: 400px;
+}
+
+/* --- بخش فرم (ورود/ثبت‌نام) --- */
+.auth-container {
+    flex-basis: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+}
+
+.auth-form {
+    width: 100%;
+    max-width: 400px;
+    /* افکت شیشه‌ای (Glassmorphism) */
+    background: rgba(28, 26, 20, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 40px;
+    border-radius: 20px;
+}
+.auth-form h2 {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 30px;
+    font-size: 2rem;
+}
+.form-group {
+    margin-bottom: 25px;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--text-secondary-color);
+}
+.form-group input {
+    width: 100%;
+    padding: 14px;
+    background-color: rgba(19, 17, 11, 0.7);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-family: var(--font-family);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.3);
+}
+.btn-auth {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.btn-auth:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(255, 193, 7, 0.3);
+}
+.switch-form {
+    text-align: center;
+    margin-top: 25px;
+    color: var(--text-secondary-color);
+}
+.switch-form a {
+    color: var(--primary-color);
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.error-box, .success-box {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid;
+    text-align: center;
+}
+.error-box { 
+    background-color: rgba(255, 77, 77, 0.1); 
+    border-color: #ff4d4d; 
+    color: #ffcccc; 
+}
+.success-box { 
+    background-color: rgba(76, 175, 80, 0.1); 
+    border-color: #4caf50; 
+    color: #c8e6c9; 
+}
+
+
+/* --- واکنش‌گرایی برای موبایل --- */
+@media (max-width: 800px) {
+    .auth-page-wrapper {
+        flex-direction: column;
+    }
+    .auth-showcase {
+        flex-basis: 30vh; /* ارتفاع ثابت در موبایل */
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+    }
+    .showcase-text {
+        max-width: 100%;
+        font-size: 1rem;
+    }
+    .auth-container {
+        flex-basis: auto;
+        padding: 20px;
+    }
+    .auth-form {
+        margin-top: -50px; /* برای اینکه فرم کمی روی بخش بالایی بیاید */
+        z-index: 2;
+        padding: 30px;
+    }
+}
