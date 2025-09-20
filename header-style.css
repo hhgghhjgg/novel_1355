@@ -1,0 +1,209 @@
+/*
+=====================================================
+    NovelWorld - Header & Navigation Stylesheet
+    Version: 3.1 (FINAL - Hybrid Navigation System)
+=====================================================
+*/
+
+/* --- هدر اصلی --- */
+.main-header {
+    background-color: rgba(19, 17, 11, 0.7);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 30px;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 70px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+.logo {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-color);
+    text-decoration: none;
+}
+.logo span { 
+    color: var(--primary-color); 
+}
+
+/* --- دکمه همبرگری (فقط در موبایل نمایش داده می‌شود) --- */
+.hamburger-btn {
+    display: none; /* در دسکتاپ مخفی است */
+    background: none;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 5px;
+    z-index: 1002;
+}
+.hamburger-btn svg { 
+    fill: currentColor; 
+}
+
+
+/* --- منوی کناری (Sidebar) --- */
+.sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 280px;
+    height: 100vh;
+    background-color: var(--surface-color);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -5px 0 20px rgba(0,0,0,0.3);
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.sidebar.open {
+    transform: translateX(0);
+}
+.sidebar-header {
+    padding: 30px 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    background-image: linear-gradient(to bottom right, #3a2d0b, #13110B);
+}
+.sidebar-profile-picture {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 15px;
+    border: 4px solid var(--surface-color);
+}
+.sidebar-username {
+    font-size: 1.2rem;
+    color: var(--text-color);
+    margin: 0;
+}
+.sidebar-content {
+    padding: 15px;
+    overflow-y: auto;
+}
+.nav-section-title {
+    font-size: 0.8rem;
+    color: var(--text-secondary-color);
+    text-transform: uppercase;
+    padding: 0 10px;
+    margin: 15px 0 10px 0;
+}
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-secondary-color);
+    font-weight: 500;
+}
+.nav-link:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+.nav-link.logout-link {
+    color: #ff8a8a;
+}
+.nav-link.logout-link:hover {
+    background-color: rgba(255, 77, 77, 0.1);
+    color: #ff4d4d;
+}
+.nav-link svg {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    fill: none;
+}
+
+/* --- پوشش پس‌زمینه --- */
+.sidebar-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+.sidebar-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* --- نوار ناوبری سفلی (فقط موبایل) --- */
+.mobile-bottom-nav {
+    display: none; /* در دسکتاپ مخفی است */
+}
+
+
+/* --- طراحی واکنش‌گرا برای موبایل --- */
+@media (max-width: 800px) {
+    .main-header {
+        padding: 0 15px;
+    }
+    
+    /* ۱. دکمه همبرگری را نمایش بده */
+    .hamburger-btn {
+        display: block;
+    }
+
+    /* ۲. نوار ناوبری سفلی را نمایش بده */
+    .mobile-bottom-nav {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 65px;
+        background-color: var(--surface-color);
+        border-top: 1px solid var(--border-color);
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.2);
+        z-index: 998;
+    }
+    .mobile-bottom-nav a {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: var(--text-secondary-color);
+        text-decoration: none;
+        font-size: 0.7rem;
+        flex: 1;
+        padding: 5px 0;
+    }
+    .mobile-bottom-nav a svg {
+        width: 24px;
+        height: 24px;
+        stroke: currentColor;
+        fill: none;
+    }
+    .mobile-bottom-nav a.active {
+        color: var(--primary-color);
+    }
+    
+    /* ۳. فوتر اصلی را مخفی و پدینگ بدنه را تنظیم کن */
+    body {
+        padding-bottom: 70px;
+    }
+    .main-footer {
+        display: none;
+    }
+}
