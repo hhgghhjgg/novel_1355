@@ -1,6 +1,6 @@
+<?php
 // db_connect.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Database Connection
