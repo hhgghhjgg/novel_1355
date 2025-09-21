@@ -1,6 +1,6 @@
+<?php
 // dashboard/save_chapter.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Save Chapter Script
