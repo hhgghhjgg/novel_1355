@@ -1,6 +1,6 @@
+<?php
 // index.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Main Index Page
