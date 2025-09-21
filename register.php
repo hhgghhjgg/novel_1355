@@ -1,6 +1,6 @@
+<?php
 // register.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Registration Page
