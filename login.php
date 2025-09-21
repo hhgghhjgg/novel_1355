@@ -1,26 +1,21 @@
 <?php
-// login.php
+// login.php (نسخه نهایی - بدون JWT)
 
 /*
 =====================================================
     NovelWorld - Login Page
-    Version: 2.1 (Final, Correct JWT Payload)
+    Version: 3.0 (Cookie-Session Based, No JWT)
 =====================================================
-    - این فایل منطق ورود کاربر را با استفاده از JWT مدیریت می‌کند.
-    - این نسخه تضمین می‌کند که payload توکن در بخش 'data' به صورت یک
-      آرایه انجمنی (که در JSON به آبجکت تبدیل می‌شود) ساخته می‌شود.
+    - این نسخه از سیستم JWT استفاده نمی‌کند.
+    - پس از ورود موفق، یک شناسه سشن امن در دیتابیس (جدول sessions)
+      ایجاد کرده و همان شناسه را در یک کوکی امن در مرورگر کاربر ذخیره می‌کند.
+    - این روش در محیط‌های سرورلس به خوبی کار می‌کند و ساده‌تر از JWT است.
 */
 
-// --- گام ۱: فراخوانی فایل‌های مورد نیاز ---
+// --- گام ۱: فراخوانی فایل اتصال به دیتابیس ---
+require_once 'db_connect.php';
 
-// اتصال به دیتابیس (PDO)
-require_once 'db_connect.php'; 
-
-// Autoloader کامپوزر برای کتابخانه JWT
-require_once 'vendor/autoload.php'; 
-
-// استفاده از کلاس‌های کتابخانه firebase/php-jwt
-use Firebase\JWT\JWT;
+// دیگر نیازی به autoload.php یا کتابخانه JWT نیست.
 
 // --- گام ۲: آماده‌سازی متغیرها ---
 $errors = [];
@@ -28,10 +23,10 @@ $username_input = '';
 
 // --- گام ۳: پردازش فرم ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    
     $username_input = trim($_POST['username']);
     $password = $_POST['password'];
 
+    // اعتبارسنجی اولیه
     if (empty($username_input) || empty($password)) {
         $errors[] = "نام کاربری/ایمیل و رمز عبور الزامی است.";
     } else {
@@ -41,47 +36,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$username_input, $username_input]);
             $user = $stmt->fetch();
 
+            // بررسی صحت رمز عبور
             if ($user && password_verify($password, $user['password_hash'])) {
-                // --- کاربر تایید شد! حالا توکن JWT را می‌سازیم ---
+                // --- بخش جدید: ایجاد سشن در دیتابیس ---
 
-                // ۱. خواندن کلید محرمانه از متغیرهای محیطی
-                $secret_key = getenv('JWT_SECRET_KEY');
-                if (!$secret_key) {
-                    // در صورت عدم وجود کلید، عملیات متوقف می‌شود
-                    // این یک خطای سیستمی است و نباید برای کاربر عادی رخ دهد.
-                    error_log("FATAL: JWT_SECRET_KEY is not set.");
-                    die("خطای پیکربندی سرور.");
-                }
+                // ۱. ایجاد یک شناسه سشن یکتا، طولانی و امن
+                // bin2hex(random_bytes(32)) یک رشته ۶۴ کاراکتری تصادفی می‌سازد.
+                $session_id = bin2hex(random_bytes(32)); 
+                
+                // ۲. تعیین تاریخ انقضا برای ۷ روز آینده
+                $expires_at_timestamp = time() + (3600 * 24 * 7);
+                $expires_at_db_format = date('Y-m-d H:i:s', $expires_at_timestamp);
 
-                // ۲. تعریف اطلاعات payload توکن
-                $issuer_claim = $_SERVER['HTTP_HOST']; // استفاده از دامین فعلی
-                $audience_claim = $_SERVER['HTTP_HOST'];
-                $issuedat_claim = time();
-                $expire_claim = $issuedat_claim + (3600 * 24 * 7); // توکن برای ۷ روز معتبر است
-
-                // *** نکته کلیدی و مهم برای رفع خطای قبلی ***
-                // بخش 'data' باید یک آرایه انجمنی (associative array) باشد.
-                $payload = [
-                    "iss" => $issuer_claim,
-                    "aud" => $audience_claim,
-                    "iat" => $issuedat_claim,
-                    "exp" => $expire_claim,
-                    "data" => [ 
-                        "user_id" => $user['id'],
-                        "username" => $user['username']
-                    ]
-                ];
-
-                // ۳. انکود کردن توکن
-                $jwt = JWT::encode($payload, $secret_key, 'HS256');
-
-                // ۴. ذخیره توکن در یک کوکی امن
-                setcookie("auth_token", $jwt, [
-                    'expires' => $expire_claim,
+                // ۳. ذخیره سشن جدید در جدول `sessions` دیتابیس
+                $stmt_session = $conn->prepare("INSERT INTO sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
+                $stmt_session->execute([$session_id, $user['id'], $expires_at_db_format]);
+                
+                // ۴. تنظیم کوکی در مرورگر کاربر با همان شناسه سشن
+                setcookie("user_session", $session_id, [
+                    'expires' => $expires_at_timestamp,
                     'path' => '/',
                     'domain' => '', 
                     'secure' => true,   // ضروری برای Render
-                    'httponly' => true, // بسیار مهم برای امنیت
+                    'httponly' => true, // جلوگیری از دسترسی جاوااسکریپت (مهم برای امنیت)
                     'samesite' => 'Strict'
                 ]);
                 
@@ -92,7 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $errors[] = "نام کاربری یا رمز عبور اشتباه است.";
             }
-
         } catch (PDOException $e) {
             error_log("Login DB Error: " . $e->getMessage());
             $errors[] = "خطای دیتابیس. لطفاً بعداً تلاش کنید.";
