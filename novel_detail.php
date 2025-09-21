@@ -1,6 +1,6 @@
+<?php
 // novel_detail.php (نسخه نهایی - با مدیریت چپتر)
 
-<?php
 /*
 =====================================================
     NovelWorld - Novel Detail Page
