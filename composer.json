@@ -1,0 +1,12 @@
+{
+    "name": "yourname/novelworld",
+    "description": "A web platform for novels.",
+    "require": {
+        "php": "^8.2",
+        "firebase/php-jwt": "^6.10",
+        "cloudinary/cloudinary_php": "^2.13"
+    },
+    "scripts": {
+        "start": "vendor/bin/heroku-php-apache2"
+    }
+}
