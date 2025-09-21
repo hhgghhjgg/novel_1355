@@ -4,84 +4,69 @@
 /*
 =====================================================
     NovelWorld - Login Page
-    Version: 2.0 (Serverless Ready - JWT Auth)
+    Version: 2.1 (Final, Correct JWT Payload)
 =====================================================
     - این فایل منطق ورود کاربر را با استفاده از JWT مدیریت می‌کند.
-    - پس از تایید موفقیت‌آمیز نام کاربری و رمز عبور، یک توکن JWT ساخته شده
-      و در یک کوکی امن (HttpOnly, Secure, SameSite) ذخیره می‌شود.
-    - این روش جایگزین کامل سیستم session-based سنتی است.
+    - این نسخه تضمین می‌کند که payload توکن در بخش 'data' به صورت یک
+      آرایه انجمنی (که در JSON به آبجکت تبدیل می‌شود) ساخته می‌شود.
 */
 
 // --- گام ۱: فراخوانی فایل‌های مورد نیاز ---
 
-// اتصال به دیتابیس (که اکنون با PDO کار می‌کند)
+// اتصال به دیتابیس (PDO)
 require_once 'db_connect.php'; 
 
-// فراخوانی autoload.php برای استفاده از کتابخانه JWT
-// این فایل توسط Composer ساخته می‌شود.
+// Autoloader کامپوزر برای کتابخانه JWT
 require_once 'vendor/autoload.php'; 
 
 // استفاده از کلاس‌های کتابخانه firebase/php-jwt
 use Firebase\JWT\JWT;
 
 // --- گام ۲: آماده‌سازی متغیرها ---
-
-// آرایه‌ای برای نگهداری و نمایش خطاها
 $errors = [];
-// متغیری برای نگهداری ورودی کاربر (برای نمایش مجدد در فرم در صورت خطا)
 $username_input = '';
 
-// بررسی می‌کنیم که آیا کاربر از قبل لاگین کرده است یا نه (با بررسی کوکی)
-// (این منطق را در header.php قرار خواهیم داد، اما اینجا هم می‌توان چک کرد)
-if (isset($_COOKIE['auth_token'])) {
-    // اگر توکن وجود داشت، می‌توانیم او را به صفحه پروفایل هدایت کنیم
-    // برای سادگی، این بخش را به header.php واگذار می‌کنیم.
-}
-
-
-// --- گام ۳: پردازش فرم در صورت ارسال با متد POST ---
-
+// --- گام ۳: پردازش فرم ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
-    // دریافت و پاکسازی ورودی‌ها
-    $username_input = trim($_POST['username']); // کاربر می‌تواند نام کاربری یا ایمیل را وارد کند
+    $username_input = trim($_POST['username']);
     $password = $_POST['password'];
 
-    // اعتبارسنجی اولیه
     if (empty($username_input) || empty($password)) {
         $errors[] = "نام کاربری/ایمیل و رمز عبور الزامی است.";
     } else {
         try {
-            // جستجوی کاربر در دیتابیس بر اساس نام کاربری یا ایمیل با استفاده از PDO
+            // جستجوی کاربر در دیتابیس
             $stmt = $conn->prepare("SELECT id, username, password_hash FROM users WHERE username = ? OR email = ?");
             $stmt->execute([$username_input, $username_input]);
-            
-            // واکشی اطلاعات کاربر
             $user = $stmt->fetch();
 
             if ($user && password_verify($password, $user['password_hash'])) {
                 // --- کاربر تایید شد! حالا توکن JWT را می‌سازیم ---
 
-                // ۱. کلید محرمانه را از متغیرهای محیطی می‌خوانیم. **هرگز این کلید را در کد ننویسید!**
+                // ۱. خواندن کلید محرمانه از متغیرهای محیطی
                 $secret_key = getenv('JWT_SECRET_KEY');
                 if (!$secret_key) {
-                    die("خطای امنیتی: کلید JWT در سرور تنظیم نشده است.");
+                    // در صورت عدم وجود کلید، عملیات متوقف می‌شود
+                    // این یک خطای سیستمی است و نباید برای کاربر عادی رخ دهد.
+                    error_log("FATAL: JWT_SECRET_KEY is not set.");
+                    die("خطای پیکربندی سرور.");
                 }
 
-                // ۲. اطلاعات payload توکن را تعریف می‌کنیم
-                $issuer_claim = "novelworld.com"; // آدرس سایت شما
-                $audience_claim = "novelworld.com";
+                // ۲. تعریف اطلاعات payload توکن
+                $issuer_claim = $_SERVER['HTTP_HOST']; // استفاده از دامین فعلی
+                $audience_claim = $_SERVER['HTTP_HOST'];
                 $issuedat_claim = time();
-                $notbefore_claim = $issuedat_claim; 
                 $expire_claim = $issuedat_claim + (3600 * 24 * 7); // توکن برای ۷ روز معتبر است
 
+                // *** نکته کلیدی و مهم برای رفع خطای قبلی ***
+                // بخش 'data' باید یک آرایه انجمنی (associative array) باشد.
                 $payload = [
                     "iss" => $issuer_claim,
                     "aud" => $audience_claim,
                     "iat" => $issuedat_claim,
-                    "nbf" => $notbefore_claim,
                     "exp" => $expire_claim,
-                    "data" => [ // اطلاعاتی که می‌خواهیم همراه توکن باشد
+                    "data" => [ 
                         "user_id" => $user['id'],
                         "username" => $user['username']
                     ]
@@ -94,10 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 setcookie("auth_token", $jwt, [
                     'expires' => $expire_claim,
                     'path' => '/',
-                    'domain' => '', // برای کار کردن روی localhost و دامین اصلی خالی بگذارید
-                    'secure' => true,   // فقط از طریق HTTPS ارسال شود (Render این را فراهم می‌کند)
-                    'httponly' => true, // جلوگیری از دسترسی جاوااسکریپت (بسیار مهم برای امنیت)
-                    'samesite' => 'Strict' // جلوگیری از حملات CSRF
+                    'domain' => '', 
+                    'secure' => true,   // ضروری برای Render
+                    'httponly' => true, // بسیار مهم برای امنیت
+                    'samesite' => 'Strict'
                 ]);
                 
                 // ۵. هدایت کاربر به صفحه پروفایل
@@ -105,14 +90,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit();
 
             } else {
-                // اگر کاربر یافت نشد یا رمز عبور اشتباه بود، یک پیام خطای عمومی نمایش می‌دهیم
-                // این کار از حملات شمارش نام کاربری (username enumeration) جلوگیری می‌کند.
                 $errors[] = "نام کاربری یا رمز عبور اشتباه است.";
             }
 
         } catch (PDOException $e) {
+            error_log("Login DB Error: " . $e->getMessage());
             $errors[] = "خطای دیتابیس. لطفاً بعداً تلاش کنید.";
-            // برای دیباگ: error_log($e->getMessage());
         }
     }
 }
