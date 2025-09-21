@@ -1,6 +1,6 @@
+<?php
 // profile.php
 
-<?php
 /*
 =====================================================
     NovelWorld - User Profile Page
