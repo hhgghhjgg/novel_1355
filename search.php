@@ -1,6 +1,6 @@
+<?php
 // search.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Search Page
