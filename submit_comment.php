@@ -1,6 +1,6 @@
+<?php
 // submit_comment.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Submit Comment Script
