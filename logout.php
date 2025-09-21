@@ -1,6 +1,6 @@
+<?php
 // logout.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Logout Script
