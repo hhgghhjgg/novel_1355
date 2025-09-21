@@ -3,15 +3,11 @@
 /*
 =====================================================
     NovelWorld - Reader Page Script
-    Version: 1.0
+    Version: 1.1 (Final, Hardened)
 =====================================================
-    - مدیریت نمایش/مخفی کردن نوارهای بالا و پایین.
-    - محاسبه و نمایش نوار پیشرفت (Progress Bar).
-    - مدیریت کامل منوی تنظیمات (باز/بسته شدن).
-    - اعمال و ذخیره تنظیمات کاربر (تم، فونت، اندازه فونت) در Local Storage.
-    - بارگذاری، نمایش و مدیریت تعاملات بخش نظرات به صورت داینامیک.
 */
 
+// اجرای تمام کدها پس از بارگذاری کامل ساختار HTML صفحه
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- گام ۱: انتخاب تمام عناصر DOM مورد نیاز ---
@@ -36,13 +32,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const commentsSection = document.querySelector('.chapter-comments-section');
     const commentsContainer = document.getElementById('comments-container');
     const chapterId = body.dataset.chapterId;
+    
+    // بررسی می‌کنیم که آیا عناصر اصلی صفحه وجود دارند یا نه
+    if (!readerContainer || !topBar || !bottomBar || !settingsPanel) {
+        console.error("Reader UI elements not found. Aborting script.");
+        return; // اگر عناصر اصلی نبودند، اجرای اسکریپت را متوقف کن
+    }
 
 
     // --- گام ۲: مدیریت نمایش/مخفی کردن نوارها ---
     readerContainer.addEventListener('click', (e) => {
-        // اگر روی لینک یا دکمه‌ای داخل محتوا کلیک شد، نوارها ظاهر نشوند
-        if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON') return;
-        
+        if (e.target.closest('a, button')) return;
         topBar.classList.toggle('visible');
         bottomBar.classList.toggle('visible');
     });
@@ -53,14 +53,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const scrollTop = window.scrollY || document.documentElement.scrollTop;
         const docHeight = document.documentElement.scrollHeight;
         const winHeight = window.innerHeight;
-        const scrollPercent = (scrollTop / (docHeight - winHeight)) * 100;
-        
-        // جلوگیری از مقادیر بیشتر از ۱۰۰ یا کمتر از ۰
-        const clampedPercent = Math.min(100, Math.max(0, scrollPercent));
-        progressBar.style.width = clampedPercent + '%';
+        // جلوگیری از تقسیم بر صفر اگر محتوا کوتاه باشد
+        const scrollableHeight = docHeight - winHeight;
+        if (scrollableHeight <= 0) {
+            progressBar.style.width = '100%';
+            return;
+        }
+        const scrollPercent = (scrollTop / scrollableHeight) * 100;
+        progressBar.style.width = `${Math.min(100, Math.max(0, scrollPercent))}%`;
     }
     window.addEventListener('scroll', updateProgressBar);
-    updateProgressBar(); // اجرای اولیه برای بارگذاری صفحه
+    updateProgressBar();
 
 
     // --- گام ۴: مدیریت کامل منوی تنظیمات ---
@@ -72,9 +75,11 @@ document.addEventListener('DOMContentLoaded', () => {
         settingsPanel.classList.remove('open');
         overlay.classList.remove('open');
     };
-    settingsBtn.addEventListener('click', openSettings);
-    closeSettingsBtn.addEventListener('click', closeSettings);
-    overlay.addEventListener('click', closeSettings);
+
+    if (settingsBtn) settingsBtn.addEventListener('click', openSettings);
+    if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', closeSettings);
+    if (overlay) overlay.addEventListener('click', closeSettings);
+    
     document.addEventListener('keydown', (e) => {
         if (e.key === "Escape" && settingsPanel.classList.contains('open')) {
             closeSettings();
@@ -84,117 +89,130 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- گام ۵: منطق اعمال و ذخیره تنظیمات کاربر ---
     const fontSizes = ['font-size-xsmall', 'font-size-small', 'font-size-medium', 'font-size-large', 'font-size-xlarge'];
-    let currentSizeIndex = 2; // Index for 'font-size-medium'
+    let currentSizeIndex = 2;
 
-    // تابع برای اعمال اندازه فونت
     function applyFontSize(index) {
-        content.classList.remove(...fontSizes);
-        content.classList.add(fontSizes[index]);
-        localStorage.setItem('reader_font_size_index', index);
+        currentSizeIndex = Math.max(0, Math.min(fontSizes.length - 1, index));
+        if (content) {
+            content.classList.remove(...fontSizes);
+            content.classList.add(fontSizes[currentSizeIndex]);
+        }
+        localStorage.setItem('reader_font_size_index', currentSizeIndex);
     }
 
-    // تابع برای اعمال فونت
     function applyFont(fontClass) {
-        body.className = body.className.replace(/font-\w+/g, '');
-        body.classList.add(fontClass);
-        localStorage.setItem('reader_font', fontClass);
-        fontSelect.value = fontClass;
+        if (fontClass) {
+            body.className = body.className.replace(/font-\w+/g, '');
+            body.classList.add(fontClass);
+            localStorage.setItem('reader_font', fontClass);
+            if (fontSelect) fontSelect.value = fontClass;
+        }
     }
 
-    // تابع برای اعمال تم
     function applyTheme(themeClass) {
-        body.className = body.className.replace(/theme-\w+/g, '');
-        body.classList.add(themeClass);
-        localStorage.setItem('reader_theme', themeClass);
+        if (themeClass) {
+            body.className = body.className.replace(/theme-\w+/g, '');
+            body.classList.add(themeClass);
+            localStorage.setItem('reader_theme', themeClass);
+            if (themeSwatches) {
+                themeSwatches.forEach(swatch => {
+                    swatch.classList.toggle('active', swatch.dataset.theme === themeClass);
+                });
+            }
+        }
+    }
+
+    if (decreaseFontBtn) decreaseFontBtn.addEventListener('click', () => applyFontSize(currentSizeIndex - 1));
+    if (increaseFontBtn) increaseFontBtn.addEventListener('click', () => applyFontSize(currentSizeIndex + 1));
+    if (fontSelect) fontSelect.addEventListener('change', (e) => applyFont(e.target.value));
+    if (themeSwatches) {
         themeSwatches.forEach(swatch => {
-            swatch.classList.toggle('active', swatch.dataset.theme === themeClass);
+            swatch.addEventListener('click', () => applyTheme(swatch.dataset.theme));
         });
     }
 
-    // رویدادهای کلیک برای دکمه‌های تنظیمات
-    decreaseFontBtn.addEventListener('click', () => {
-        if (currentSizeIndex > 0) {
-            currentSizeIndex--;
-            applyFontSize(currentSizeIndex);
-        }
-    });
-    increaseFontBtn.addEventListener('click', () => {
-        if (currentSizeIndex < fontSizes.length - 1) {
-            currentSizeIndex++;
-            applyFontSize(currentSizeIndex);
-        }
-    });
-    fontSelect.addEventListener('change', (e) => applyFont(e.target.value));
-    themeSwatches.forEach(swatch => {
-        swatch.addEventListener('click', () => applyTheme(swatch.dataset.theme));
-    });
-
-    // بارگذاری تنظیمات ذخیره شده هنگام ورود به صفحه
     function loadUserSettings() {
         const savedTheme = localStorage.getItem('reader_theme') || 'theme-dark';
         const savedFont = localStorage.getItem('reader_font') || 'font-vazirmatn';
-        const savedSizeIndex = parseInt(localStorage.getItem('reader_font_size_index'), 10) || 2;
+        const savedSizeIndex = parseInt(localStorage.getItem('reader_font_size_index'), 10);
         
-        currentSizeIndex = savedSizeIndex;
         applyTheme(savedTheme);
         applyFont(savedFont);
-        applyFontSize(savedSizeIndex);
+        applyFontSize(isNaN(savedSizeIndex) ? 2 : savedSizeIndex);
     }
     loadUserSettings();
 
 
     // --- گام ۶: بارگذاری و مدیریت داینامیک نظرات ---
     
-    // این تابع نظرات را از سرور واکشی کرده و در صفحه قرار می‌دهد
+    // این تابع در آینده نظرات را از سرور واکشی می‌کند.
     async function loadComments() {
+        if (!commentsContainer || !chapterId) return;
+        
+        commentsContainer.innerHTML = '<p>در حال بارگذاری نظرات...</p>';
         try {
-            // در آینده، شما یک فایل load_comments.php خواهید ساخت
-            // const response = await fetch(`load_comments.php?chapter_id=${chapterId}`);
-            // if (!response.ok) throw new Error('Network response was not ok');
+            // شما باید یک فایل load_chapter_comments.php بسازید
+            // const response = await fetch(`load_chapter_comments.php?chapter_id=${chapterId}`);
+            // if (!response.ok) throw new Error('Failed to fetch comments');
             // const html = await response.text();
             // commentsContainer.innerHTML = html;
-            
-            // کد نمونه برای نمایش (این بخش را بعدا با fetch جایگزین کنید)
-            commentsContainer.innerHTML = `
+
+            // --- کد نمونه برای نمایش (این بخش را بعدا با fetch واقعی جایگزین کنید) ---
+            const mockHTML = `
+                ${
+                    // USER_IS_LOGGED_IN و CURRENT_USERNAME از تگ <script> در PHP می‌آیند
+                    (typeof USER_IS_LOGGED_IN !== 'undefined' && USER_IS_LOGGED_IN)
+                    ? `<div class="comment-form-box">
+                           <h3>نظر خود را به عنوان "${CURRENT_USERNAME}" بنویسید</h3>
+                           <form id="new-comment-form">
+                               <textarea name="content" placeholder="نظر شما..." rows="4" required></textarea>
+                               <div class="form-footer">
+                                   <button type="submit" class="btn btn-primary">ارسال نظر</button>
+                               </div>
+                           </form>
+                       </div>`
+                    : '<p class="login-prompt"><a href="login.php">برای ثبت نظر، لطفاً وارد شوید.</a></p>'
+                }
+                
                 <div class="comment-box">
-                    <p>بخش نظرات به زودی فعال خواهد شد!</p>
+                    <div class="comment-header"><span class="username">تستر</span><span class="timestamp">2025/09/21</span></div>
+                    <div class="comment-body"><p>این یک کامنت نمونه برای این چپتر است.</p></div>
+                    <div class="comment-footer"><div class="actions">
+                        <button class="action-btn reply-btn">پاسخ</button>
+                        <button class="action-btn like-btn" data-comment-id="101">👍 <span>5</span></button>
+                        <button class="action-btn dislike-btn" data-comment-id="101">👎 <span>1</span></button>
+                    </div></div>
                 </div>
             `;
+            commentsContainer.innerHTML = mockHTML;
+            // --- پایان کد نمونه ---
+
         } catch (error) {
             commentsContainer.innerHTML = `<p style="color: #ff8a8a;">خطا در بارگذاری نظرات.</p>`;
-            console.error('Failed to load comments:', error);
+            console.error(error);
         }
     }
     
-    // اولین بار نظرات را بارگذاری می‌کنیم
-    if (chapterId) {
+    if (commentsSection) {
         loadComments();
+
+        commentsSection.addEventListener('submit', async (e) => {
+            if (e.target.id === 'new-comment-form') {
+                e.preventDefault();
+                const form = e.target;
+                const content = form.querySelector('textarea[name="content"]').value;
+                
+                // در اینجا منطق ارسال نظر جدید با fetch را اضافه کنید
+                // const formData = new FormData();
+                // formData.append('content', content);
+                // formData.append('chapter_id', chapterId);
+                // await fetch('submit_chapter_comment.php', { method: 'POST', body: formData });
+                
+                console.log("ارسال نظر:", content);
+                alert("نظر شما (به صورت آزمایشی) ثبت شد!");
+                form.reset();
+                // loadComments(); // بارگذاری مجدد نظرات پس از ارسال
+            }
+        });
     }
-    
-    // استفاده از Event Delegation برای مدیریت رویدادهای کلیک در کل بخش نظرات
-    commentsSection.addEventListener('click', (e) => {
-        const target = e.target;
-
-        // اگر روی دکمه لایک کلیک شد
-        const likeBtn = target.closest('.like-btn');
-        if (likeBtn) {
-            console.log('Like button clicked for comment:', likeBtn.dataset.commentId);
-            // در اینجا منطق ارسال درخواست fetch برای لایک کردن را اضافه کنید
-        }
-
-        // اگر روی دکمه دیسلایک کلیک شد
-        const dislikeBtn = target.closest('.dislike-btn');
-        if (dislikeBtn) {
-            console.log('Dislike button clicked for comment:', dislikeBtn.dataset.commentId);
-             // در اینجا منطق ارسال درخواست fetch برای دیسلایک کردن را اضافه کنید
-        }
-
-        // اگر روی دکمه ریپلای کلیک شد
-        const replyBtn = target.closest('.reply-btn');
-        if (replyBtn) {
-            console.log('Reply button clicked for comment box');
-            // در اینجا منطق نمایش فرم ریپلای را اضافه کنید
-        }
-    });
 });
-```
