@@ -1,6 +1,6 @@
+<?php
 // dashboard/delete_chapter.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Delete Chapter Script
