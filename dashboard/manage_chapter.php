@@ -1,6 +1,6 @@
+<?php
 // dashboard/manage_chapter.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Manage Chapter Page
