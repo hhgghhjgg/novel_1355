@@ -1,6 +1,6 @@
+<?php
 // header.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Main Site Header
