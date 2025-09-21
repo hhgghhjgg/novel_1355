@@ -1,0 +1,264 @@
+/* reader-style.css */
+
+/*
+=====================================================
+    NovelWorld - Reader Page Stylesheet
+    Version: 1.0
+=====================================================
+*/
+
+/* --- گام ۱: تعریف متغیرهای CSS برای تم‌ها و فونت‌ها --- */
+:root {
+    /* رنگ‌های پایه تم تاریک (پیش‌فرض) */
+    --reader-bg: #1a1a20;
+    --reader-text: #e0e0e0;
+    --reader-meta: #a0a0a0;
+    --reader-border: #3a3a42;
+    --reader-surface: #2a2a32;
+    --reader-primary: #FFC107;
+
+    /* فونت‌های مختلف */
+    --font-vazirmatn: 'Vazirmatn', sans-serif;
+    --font-amiri: 'Amiri', serif;
+    --font-markazi: 'Markazi Text', serif;
+    --font-lalezar: 'Lalezar', cursive;
+    --font-scheherazade: 'Scheherazade New', serif;
+}
+
+/* --- گام ۲: استایل‌های پایه و کلاس‌های اصلی --- */
+body {
+    background-color: var(--reader-bg);
+    color: var(--reader-text);
+    font-family: var(--font-vazirmatn); /* فونت پیش‌فرض */
+    line-height: 1.9;
+    font-weight: 400;
+    margin: 0;
+    padding: 80px 0; /* فاصله از بالا و پایین برای نوارها */
+    transition: background-color 0.3s, color 0.3s;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- گام ۳: تعریف کلاس‌های تم‌ها --- */
+body.theme-light {
+    --reader-bg: #f5f5f5;
+    --reader-text: #212121;
+    --reader-meta: #757575;
+    --reader-border: #e0e0e0;
+    --reader-surface: #ffffff;
+}
+body.theme-sepia {
+    --reader-bg: #fbf0d9;
+    --reader-text: #5b4636;
+    --reader-meta: #8d6e63;
+    --reader-border: #d7ccc8;
+    --reader-surface: #efebe9;
+}
+body.theme-gray {
+    --reader-bg: #464E59;
+    --reader-text: #E0E0E0;
+    --reader-meta: #BDBDBD;
+    --reader-border: #616161;
+    --reader-surface: #545d6a;
+}
+body.theme-hacker {
+    --reader-bg: #001a00;
+    --reader-text: #00ff00;
+    --reader-meta: #00cc00;
+    --reader-border: #003300;
+    --reader-surface: #002a00;
+    font-family: monospace;
+}
+
+/* --- گام ۴: تعریف کلاس‌های فونت‌ها --- */
+body.font-vazirmatn .reader-content { font-family: var(--font-vazirmatn); }
+body.font-amiri .reader-content { font-family: var(--font-amiri); }
+body.font-markazi .reader-content { font-family: var(--font-markazi); line-height: 2.0; }
+body.font-lalezar .reader-content { font-family: var(--font-lalezar); letter-spacing: 0.5px; }
+body.font-scheherazade .reader-content { font-family: var(--font-scheherazade); line-height: 2.1; }
+
+/* --- گام ۵: استایل‌های نوارهای بالا و پایین --- */
+.reader-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    background: rgba(26, 26, 32, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    z-index: 100;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+    border-bottom: 1px solid var(--reader-border);
+}
+.top-bar { top: 0; transform: translateY(-100%); border-top: none; }
+.bottom-bar { bottom: 0; transform: translateY(100%); border-bottom: none; border-top: 1px solid var(--reader-border); }
+
+.reader-bar.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.bar-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+.bar-btn:hover { background-color: rgba(255, 255, 255, 0.1); }
+
+.chapter-info { text-align: center; }
+.chapter-info h3 { margin: 0; font-size: 1rem; }
+.chapter-info span { font-size: 0.8rem; opacity: 0.7; }
+
+.nav-btn {
+    color: #fff;
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+.nav-btn:hover { background-color: rgba(255, 255, 255, 0.1); }
+.nav-btn.disabled { color: #888; pointer-events: none; opacity: 0.5; }
+
+.progress-container {
+    flex-grow: 1;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.2);
+    margin: 0 15px;
+    border-radius: 2px;
+    overflow: hidden;
+}
+.progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: var(--reader-primary);
+    transition: width 0.1s linear;
+}
+
+/* --- گام ۶: استایل محتوای اصلی --- */
+.reader-container {
+    padding: 0 10%;
+    cursor: pointer;
+}
+.reader-content {
+    max-width: 800px;
+    margin: 0 auto;
+    transition: font-size 0.3s;
+}
+.reader-content p { margin: 0 0 1.5em 0; }
+.reader-content h1, .reader-content h2, .reader-content h3 {
+    margin: 2em 0 1em 0;
+    line-height: 1.4;
+}
+/* کلاس‌های اندازه فونت */
+.font-size-xsmall { font-size: 12px; }
+.font-size-small { font-size: 14px; }
+.font-size-medium { font-size: 16px; }
+.font-size-large { font-size: 18px; }
+.font-size-xlarge { font-size: 20px; }
+
+/* --- گام ۷: استایل منوی تنظیمات --- */
+.overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+.overlay.open { opacity: 1; visibility: visible; }
+
+.settings-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 100%;
+    background-color: var(--reader-surface);
+    z-index: 1001;
+    box-shadow: -5px 0 20px rgba(0,0,0,0.3);
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    display: flex;
+    flex-direction: column;
+}
+.settings-panel.open { transform: translateX(0); }
+
+.settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--reader-border);
+    flex-shrink: 0;
+}
+.settings-header h4 { margin: 0; }
+.settings-header .close-btn { color: var(--reader-text); }
+.settings-content { padding: 20px; }
+.setting-group { margin-bottom: 25px; }
+.setting-group label { display: block; margin-bottom: 10px; color: var(--reader-meta); }
+
+.font-size-controls, .theme-controls { display: flex; justify-content: space-between; align-items: center; }
+.setting-btn, .setting-select {
+    background: var(--reader-bg);
+    border: 1px solid var(--reader-border);
+    color: var(--reader-text);
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.setting-select { width: 100%; }
+.font-size-controls span { font-size: 1.5rem; }
+
+.theme-swatch {
+    width: 30px; height: 30px;
+    border: 2px solid var(--reader-border);
+    border-radius: 50%;
+    cursor: pointer;
+}
+.theme-swatch.active { border-color: var(--reader-primary); box-shadow: 0 0 0 2px var(--reader-primary); }
+
+/* --- گام ۸: استایل بخش نظرات --- */
+.chapter-comments-section {
+    padding: 30px 0;
+    border-top: 1px solid var(--reader-border);
+    background-color: var(--reader-surface);
+}
+.comments-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+.comments-wrapper h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--reader-border);
+}
+/* (استایل‌های دیگر کامنت‌ها می‌تواند از detail-style.css کپی شود و کمی تغییر کند) */
+
+
+/* --- گام ۹: واکنش‌گرایی --- */
+@media (max-width: 768px) {
+    .reader-container { padding: 0 5%; }
+    .reader-content { font-size: 15px; }
+    .nav-btn span { display: none; }
+    .nav-btn { padding: 8px; }
+    .bottom-bar { padding: 5px 10px; }
+}
