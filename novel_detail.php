@@ -1,6 +1,6 @@
+<?php
 // novel_detail.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Novel Detail Page
