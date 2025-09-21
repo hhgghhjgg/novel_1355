@@ -4,46 +4,31 @@
 /*
 =====================================================
     NovelWorld - Create New Novel Page
-    Version: 2.0 (Serverless Ready - Cloudinary Upload)
+    Version: 2.1 (Final - With Telegram Notifier)
 =====================================================
-    - این فایل فرم و منطق ایجاد یک ناول جدید را مدیریت می‌کند.
-    - احراز هویت نویسنده از طریق سیستم JWT (که در header.php پیاده‌سازی شده) بررسی می‌شود.
-    - تصویر کاور با استفاده از Cloudinary SDK آپلود شده و URL آن در دیتابیس ذخیره می‌شود.
-    - اطلاعات ناول با استفاده از PDO در دیتابیس PostgreSQL (Neon) ذخیره می‌شود.
+    - فرم و منطق ایجاد یک ناول جدید.
+    - آپلود کاور در Cloudinary و ذخیره اطلاعات در دیتابیس.
+    - ارسال نوتیفیکیشن به تلگرام پس از ایجاد موفقیت‌آمیز.
 */
 
 // --- گام ۱: فراخوانی فایل‌های مورد نیاز ---
-
-// فراخوانی هدر اختصاصی داشبورد
-// این فایل شامل اتصال به دیتابیس (PDO) و بررسی وضعیت لاگین (JWT) است.
-// همچنین متغیرهایی مانند $user_id و $is_logged_in را در دسترس قرار می‌دهد.
+// هدر داشبورد (برای امنیت، اتصال دیتابیس و اطلاعات کاربر)
 require_once 'header.php';
-
-// فراخوانی Autoloader کامپوزر برای استفاده از کتابخانه Cloudinary
-require_once '../vendor/autoload.php';
+// Autoloader کامپوزر (برای کتابخانه Cloudinary)
+require_once __DIR__ . '/../vendor/autoload.php';
+// ماژول نوتیفیکیشن تلگرام
+require_once __DIR__ . '/../telegram_notifier.php';
 
 // استفاده از کلاس‌های Cloudinary
 use Cloudinary\Cloudinary;
-use Cloudinary\Api\Exception\ApiError;
 
-
-// --- گام ۲: بررسی امنیت و مجوز دسترسی ---
-// اگرچه این بررسی در header.php انجام می‌شود، تکرار آن در اینجا امنیت را افزایش می‌دهد.
-if (!$is_logged_in) {
-    // اگر کاربر لاگین نکرده بود، او را به صفحه لاگین اصلی سایت هدایت می‌کنیم.
-    header("Location: ../login.php"); 
-    exit();
-}
-
-
-// --- گام ۳: پردازش فرم ---
-
+// --- گام ۲: آماده‌سازی متغیرها ---
 $errors = []; // آرایه‌ای برای نگهداری و نمایش خطاها
 
-// بررسی می‌کنیم که آیا فرم با متد POST ارسال شده است
+// --- گام ۳: پردازش فرم ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // دریافت تمام اطلاعات از فرم و پاکسازی آن‌ها
+    // دریافت و پاکسازی اطلاعات فرم
     $title = trim($_POST['title']);
     $summary = trim($_POST['summary']);
     $genres = trim($_POST['genres']);
@@ -51,42 +36,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $artist = trim($_POST['artist']);
     $rating = floatval($_POST['rating']);
     $status = $_POST['status'];
-    // ID نویسنده از متغیر سراسری که در header.php تعریف شده خوانده می‌شود.
-    $author_id = $user_id; 
+    $author_id = $user_id; // از هدر داشبورد می‌آید
 
-    // --- گام ۳.۱: پردازش آپلود فایل کاور با Cloudinary ---
+    // --- ۳.۱: پردازش آپلود کاور در Cloudinary ---
     $cover_url_for_db = '';
     if (isset($_FILES['cover_image']) && $_FILES['cover_image']['error'] === UPLOAD_ERR_OK) {
-        
-        // اعتبارسنجی اولیه نوع فایل
         $file_info = pathinfo($_FILES['cover_image']['name']);
         $file_ext = strtolower($file_info['extension']);
         $allowed_exts = ['jpg', 'jpeg', 'png', 'webp'];
 
         if (in_array($file_ext, $allowed_exts)) {
             try {
-                // ۱. کانفیگ کردن Cloudinary با استفاده از متغیرهای محیطی
                 $cloudinary_url = getenv('CLOUDINARY_URL');
                 if (!$cloudinary_url) {
                     throw new Exception("متغیر CLOUDINARY_URL در سرور تنظیم نشده است.");
                 }
                 $cloudinary = new Cloudinary($cloudinary_url);
 
-                // ۲. آپلود فایل به Cloudinary
                 $uploadResult = $cloudinary->uploadApi()->upload(
                     $_FILES['cover_image']['tmp_name'],
-                    [
-                        'folder' => 'novel_covers', // نام پوشه‌ای که تصاویر در آن ذخیره می‌شوند
-                        'resource_type' => 'image',
-                        // (اختیاری) بهینه‌سازی خودکار تصویر هنگام آپلود
-                        'transformation' => [
-                            ['width' => 800, 'height' => 1200, 'crop' => 'limit'],
-                            ['fetch_format' => 'auto', 'quality' => 'auto']
-                        ]
-                    ]
+                    ['folder' => 'novel_covers']
                 );
                 
-                // ۳. دریافت URL امن و بهینه شده از نتیجه آپلود
                 $cover_url_for_db = $uploadResult['secure_url'];
 
             } catch (Exception $e) {
@@ -99,36 +70,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = "لطفاً یک تصویر برای کاور انتخاب کنید.";
     }
 
-    // --- گام ۳.۲: ذخیره اطلاعات در دیتابیس ---
-    // اگر خطایی در مراحل قبل (به خصوص آپلود فایل) وجود نداشت، اطلاعات را ذخیره کن
+    // --- ۳.۲: ذخیره در دیتابیس و ارسال نوتیفیکیشن ---
     if (empty($errors)) {
         try {
-            // کوئری INSERT با استفاده از سینتکس PDO
             $sql = "INSERT INTO novels (author_id, title, summary, cover_url, genres, author, artist, rating, status) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             
             $stmt = $conn->prepare($sql);
             
-            // اجرای کوئری با ارسال آرایه‌ای از مقادیر
-            $stmt->execute([
-                $author_id, 
-                $title, 
-                $summary, 
-                $cover_url_for_db, 
-                $genres, 
-                $author, 
-                $artist, 
-                $rating, 
-                $status
-            ]);
+            $stmt->execute([$author_id, $title, $summary, $cover_url_for_db, $genres, $author, $artist, $rating, $status]);
 
-            // بازگشت به صفحه اصلی داشبورد پس از ثبت موفق
+            // دریافت ID ناولی که همین الان ایجاد شد
+            $new_novel_id = $conn->lastInsertId();
+
+            // --- ۳.۳: ارسال نوتیفیکیشن تلگرام ---
+            if ($new_novel_id) {
+                $caption = "✨ <b>اثر جدیدی منتشر شد!</b> ✨\n\n";
+                $caption .= "<b>" . htmlspecialchars($title) . "</b>\n";
+                $caption .= "<i>نویسنده: " . htmlspecialchars($author) . "</i>";
+                
+                sendTelegramNotification(
+                    $cover_url_for_db,
+                    $caption,
+                    "📖 مشاهده و شروع خواندن",
+                    "novel_detail.php?id=" . $new_novel_id
+                );
+            }
+
+            // بازگشت به صفحه اصلی داشبورد با پیام موفقیت
             header("Location: index.php?status=novel_created");
             exit();
 
         } catch (PDOException $e) {
-            $errors[] = "خطا در ذخیره اطلاعات در دیتابیس: " . $e->getMessage();
-            // در محیط واقعی، بهتر است این خطا را لاگ کنید.
+            error_log("Create Novel DB Error: " . $e->getMessage());
+            $errors[] = "خطا در ذخیره اطلاعات در دیتابیس. لطفاً دوباره تلاش کنید.";
         }
     }
 }
@@ -159,10 +134,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="form-group-grid">
             <div class="form-group">
                 <label for="author">نویسنده:</label>
-                <input type="text" id="author" name="author">
+                <input type="text" id="author" name="author" value="<?php echo $username; // نام کاربری نویسنده به عنوان پیش‌فرض ?>">
             </div>
             <div class="form-group">
-                <label for="artist">آرتیست:</label>
+                <label for="artist">آرتیست (اختیاری):</label>
                 <input type="text" id="artist" name="artist">
             </div>
         </div>
@@ -178,13 +153,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="form-group-grid">
             <div class="form-group">
-                <label for="rating">امتیاز (از ۱۰):</label>
+                <label for="rating">امتیاز اولیه (از ۱۰):</label>
                 <input type="number" id="rating" name="rating" step="0.1" min="0" max="10" value="0.0" required>
             </div>
             <div class="form-group">
                 <label for="status">وضعیت انتشار:</label>
                 <select id="status" name="status" required>
-                    <option value="ongoing">در حال انتشار</option>
+                    <option value="ongoing" selected>در حال انتشار</option>
                     <option value="completed">کامل شده</option>
                     <option value="hiatus">متوقف شده</option>
                 </select>
@@ -196,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <input type="file" id="cover_image" name="cover_image" accept="image/jpeg,image/png,image/webp" required>
         </div>
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">ایجاد ناول</button>
+            <button type="submit" class="btn btn-primary">ایجاد و انتشار ناول</button>
             <a href="index.php" class="btn btn-secondary">انصراف</a>
         </div>
     </form>
