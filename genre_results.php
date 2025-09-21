@@ -1,6 +1,6 @@
+<?php
 // genre_results.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Genre Results Page
