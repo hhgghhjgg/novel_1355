@@ -1,6 +1,6 @@
+<?php
 // core.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Core Application File
