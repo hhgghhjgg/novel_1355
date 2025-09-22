@@ -3,85 +3,89 @@
 
 /*
 =====================================================
-    NovelWorld - Chapter Reader Page
-    Version: 1.0
+    NovelWorld - Chapter Reader Page (Multi-Type)
+    Version: 2.1 (Final, Unabridged)
 =====================================================
-    - این صفحه محتوای یک چپتر را برای خواندن نمایش می‌دهد.
-    - یک تجربه تمام‌صفحه و بدون هدر و فوتر اصلی سایت فراهم می‌کند.
-    - اطلاعات چپتر، ناول و ناوبری (چپتر قبلی/بعدی) را از دیتابیس واکشی می‌کند.
+    - این صفحه به صورت هوشمند محتوای چپتر را بر اساس نوع اثر (متنی یا تصویری) نمایش می‌دهد.
+    - کاملاً مستقل عمل می‌کند و هدر/فوتر اصلی سایت را فراخوانی نمی‌کند.
 */
 
 // --- گام ۱: فراخوانی فایل اتصال به دیتابیس ---
 require_once 'db_connect.php';
 
-// --- گام ۲: واکشی اطلاعات چپتر ---
-$chapter_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-
-if ($chapter_id <= 0) {
-    // اگر شناسه نامعتبر بود، یک صفحه خطای ساده نمایش می‌دهیم.
-    die("خطای ۴۰۴: شناسه چپتر نامعتبر است.");
+// --- گام ۲: منطق احراز هویت (برای بخش نظرات) ---
+$is_logged_in = false;
+$user_id = null;
+$username = 'کاربر مهمان';
+if (isset($_COOKIE['user_session'])) {
+    $session_id = $_COOKIE['user_session'];
+    try {
+        $stmt_auth = $conn->prepare("SELECT u.id, u.username FROM users u JOIN sessions s ON u.id = s.user_id WHERE s.session_id = ? AND s.expires_at > NOW()");
+        $stmt_auth->execute([$session_id]);
+        $user = $stmt_auth->fetch();
+        if ($user) {
+            $is_logged_in = true;
+            $user_id = $user['id'];
+            $username = $user['username'];
+        }
+    } catch (PDOException $e) {
+        error_log("Reader Auth Error: " . $e->getMessage());
+    }
 }
 
+// --- گام ۳: واکشی اطلاعات چپتر و نوع اثر ---
+$chapter_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+if ($chapter_id <= 0) die("شناسه چپتر نامعتبر است.");
+
 try {
-    // ۱. واکشی اطلاعات اصلی چپتر و ناول مربوطه با یک JOIN
+    // واکشی اطلاعات چپتر به همراه نوع و عنوان ناول والد
     $stmt = $conn->prepare(
-        "SELECT c.id, c.novel_id, c.chapter_number, c.title, c.content, 
-                n.title as novel_title
+        "SELECT c.*, n.title as novel_title, n.type as novel_type
          FROM chapters c 
          JOIN novels n ON c.novel_id = n.id 
          WHERE c.id = ?"
     );
     $stmt->execute([$chapter_id]);
     $chapter = $stmt->fetch();
+    if (!$chapter) die("چپتر یافت نشد.");
 
-    if (!$chapter) {
-        die("خطای ۴۰۴: چپتر مورد نظر یافت نشد.");
-    }
-
-    // ۲. واکشی شناسه چپتر قبلی (چپتری با شماره کمتر)
-    $stmt_prev = $conn->prepare(
-        "SELECT id FROM chapters 
-         WHERE novel_id = ? AND chapter_number < ? 
-         ORDER BY chapter_number DESC LIMIT 1"
-    );
+    // واکشی چپتر قبلی و بعدی
+    $stmt_prev = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number < ? ORDER BY chapter_number DESC LIMIT 1");
     $stmt_prev->execute([$chapter['novel_id'], $chapter['chapter_number']]);
     $prev_chapter = $stmt_prev->fetch();
 
-    // ۳. واکشی شناسه چپتر بعدی (چپتری با شماره بیشتر)
-    $stmt_next = $conn->prepare(
-        "SELECT id FROM chapters 
-         WHERE novel_id = ? AND chapter_number > ? 
-         ORDER BY chapter_number ASC LIMIT 1"
-    );
+    $stmt_next = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number > ? ORDER BY chapter_number ASC LIMIT 1");
     $stmt_next->execute([$chapter['novel_id'], $chapter['chapter_number']]);
     $next_chapter = $stmt_next->fetch();
 
 } catch (PDOException $e) {
-    error_log("Reader Page DB Error: " . $e->getMessage());
-    die("خطایی در ارتباط با دیتابیس رخ داد. لطفاً بعداً تلاش کنید.");
+    die("خطای دیتابیس: " . $e->getMessage());
 }
 
-
-// --- گام ۳: رندر کردن HTML صفحه ---
+$is_text_based = ($chapter['novel_type'] === 'novel');
+$image_urls = [];
+if (!$is_text_based) {
+    $decoded_content = json_decode($chapter['content'], true);
+    if (is_array($decoded_content)) {
+        $image_urls = $decoded_content;
+    }
+}
 ?>
+
+<!-- --- گام ۴: رندر کردن HTML صفحه --- -->
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($chapter['novel_title']) . ' - ' . htmlspecialchars($chapter['title']); ?></title>
-    
-    <!-- لینک به فایل CSS اختصاصی صفحه خواندن -->
     <link rel="stylesheet" href="reader-style.css">
-    
-    <!-- فراخوانی فونت‌های مورد نیاز برای منوی تنظیمات -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Lalezar&family=Amiri:wght@400;700&family=Markazi+Text:wght@400;500;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body class="theme-dark font-vazirmatn" data-chapter-id="<?php echo $chapter['id']; ?>">
 
-    <!-- نوار بالایی (در حالت عادی مخفی) -->
     <header class="reader-bar top-bar">
         <a href="novel_detail.php?id=<?php echo $chapter['novel_id']; ?>" class="bar-btn back-btn" title="بازگشت به صفحه ناول">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
@@ -95,29 +99,36 @@ try {
         </button>
     </header>
 
-    <!-- محتوای اصلی چپتر -->
-    <main id="reader-container" class="reader-container">
-        <div id="reader-content" class="reader-content font-size-medium">
-            <?php echo $chapter['content']; // محتوای HTML از TinyMCE بدون escaping نمایش داده می‌شود ?>
-        </div>
+    <main id="reader-container" class="reader-container <?php echo $is_text_based ? '' : 'image-based-reader'; ?>">
+        <?php if ($is_text_based): ?>
+            <div id="reader-content" class="reader-content font-size-medium">
+                <?php echo $chapter['content']; ?>
+            </div>
+        <?php else: ?>
+            <div id="image-reader-content" class="image-reader-content">
+                <?php if (empty($image_urls)): ?>
+                    <p style="color: var(--reader-meta); text-align: center;">هیچ تصویری برای این چپتر یافت نشد.</p>
+                <?php else: ?>
+                    <?php foreach ($image_urls as $url): ?>
+                        <img data-src="<?php echo htmlspecialchars($url); ?>" alt="صفحه چپتر" class="lazy-load">
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </main>
 
-    <!-- نوار پایینی (در حالت عادی مخفی) -->
     <footer class="reader-bar bottom-bar">
         <a href="<?php echo $prev_chapter ? 'read_chapter.php?id='.$prev_chapter['id'] : '#'; ?>" class="nav-btn <?php echo !$prev_chapter ? 'disabled' : ''; ?>">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
             <span>قبلی</span>
         </a>
-        <div class="progress-container">
-            <div id="progress-bar" class="progress-bar"></div>
-        </div>
+        <div class="progress-container"><div id="progress-bar" class="progress-bar"></div></div>
         <a href="<?php echo $next_chapter ? 'read_chapter.php?id='.$next_chapter['id'] : '#'; ?>" class="nav-btn <?php echo !$next_chapter ? 'disabled' : ''; ?>">
             <span>بعدی</span>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
         </a>
     </footer>
 
-    <!-- منوی تنظیمات (در حالت عادی مخفی) -->
     <div id="settings-panel" class="settings-panel">
         <div class="settings-header">
             <h4>تنظیمات نمایش</h4>
@@ -135,11 +146,11 @@ try {
             <div class="setting-group">
                 <label>فونت متن</label>
                 <select id="font-select" class="setting-select">
-                    <option value="font-vazirmatn" selected>وزیرمتن (پیش‌فرض)</option>
-                    <option value="font-amiri">امیری (رسمی)</option>
-                    <option value="font-markazi">مرکزی (خوانا)</option>
-                    <option value="font-lalezar">لاله‌زار (عنوانی)</option>
-                    <option value="font-scheherazade">شهرزاد (کلاسیک)</option>
+                    <option value="font-vazirmatn" selected>وزیرمتن</option>
+                    <option value="font-amiri">امیری</option>
+                    <option value="font-markazi">مرکزی</option>
+                    <option value="font-lalezar">لاله‌زار</option>
+                    <option value="font-scheherazade">شهرزاد</option>
                 </select>
             </div>
             <div class="setting-group">
@@ -156,18 +167,18 @@ try {
     </div>
     <div id="settings-overlay" class="overlay"></div>
 
-    <!-- بخش جدید نظرات برای چپتر -->
     <section class="chapter-comments-section">
         <div class="comments-wrapper">
             <h2>نظرات این چپتر</h2>
-            <!-- نظرات به صورت داینامیک توسط جاوااسکریپت در اینجا بارگذاری می‌شوند -->
-            <div id="comments-container">
-                <!-- این بخش توسط reader-script.js پر خواهد شد -->
-                <p>در حال بارگذاری نظرات...</p>
-            </div>
+            <div id="comments-container"><p>در حال بارگذاری نظرات...</p></div>
         </div>
     </section>
 
+    <script>
+        const USER_IS_LOGGED_IN = <?php echo json_encode($is_logged_in); ?>;
+        const CURRENT_USER_ID = <?php echo json_encode($user_id); ?>;
+        const CURRENT_USERNAME = <?php echo json_encode($username); ?>;
+    </script>
     <script src="reader-script.js"></script>
 </body>
 </html>
