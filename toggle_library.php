@@ -1,6 +1,6 @@
-// toggle_library.php
-
 <?php
+//toggle_library.php
+
 /*
 =====================================================
     NovelWorld - Toggle Library Item (AJAX Endpoint)
