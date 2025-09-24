@@ -1,33 +1,27 @@
-// admin/header.php (نسخه نهایی و مستقل)
-
-<?php
+<?php // <<-- فایل باید دقیقاً با این تگ شروع شود
 /*
 =====================================================
-    NovelWorld - Admin Panel Header (Final Version)
+    NovelWorld - Admin Panel Header (Final, Patched)
+    Version: 1.1
 =====================================================
     - این فایل دروازه ورود به کل پنل ادمین است.
     - این نسخه به صورت مستقل عمل کرده و تمام منطق لازم برای احراز هویت
       و بررسی نقش ادمین را در خود دارد.
+    - مشکل "headers already sent" با قرار دادن تمام کدها در داخل تگ PHP حل شده است.
 */
 
 // --- گام ۱: فراخوانی فایل اتصال به دیتابیس ---
-// ما مستقیماً به اتصال دیتابیس نیاز داریم.
 require_once __DIR__ . '/../db_connect.php';
 
 // --- گام ۲: منطق کامل احراز هویت و بررسی نقش ادمین ---
-
 $is_logged_in = false;
 $is_admin = false;
 $user_id = null;
 $username = '';
 
-// ۱. بررسی کوکی سشن
 if (isset($_COOKIE['user_session'])) {
     $session_id = $_COOKIE['user_session'];
-    
     try {
-        // ۲. پیدا کردن کاربر از طریق سشن
-        // ما مستقیماً نقش (role) کاربر را هم در همین کوئری واکشی می‌کنیم.
         $stmt = $conn->prepare(
             "SELECT u.id, u.username, u.role 
              FROM users u 
@@ -41,27 +35,24 @@ if (isset($_COOKIE['user_session'])) {
             $is_logged_in = true;
             $user_id = $user['id'];
             $username = htmlspecialchars($user['username']);
-
-            // ۳. بررسی می‌کنیم که آیا نقش کاربر 'admin' است یا نه
             if ($user['role'] === 'admin') {
                 $is_admin = true;
             }
         }
     } catch (PDOException $e) {
-        // در صورت بروز خطا، کاربر به عنوان ادمین شناخته نمی‌شود.
         error_log("Admin Header Auth Error: " . $e->getMessage());
     }
 }
 
 // --- گام ۳: محافظت نهایی از پنل ادمین ---
-// اگر کاربر ادمین نباشد (چه لاگین نکرده باشد و چه کاربر عادی باشد)،
-// او را از پنل خارج می‌کنیم.
 if (!$is_admin) {
-    header("Location: ../login.php"); // بهتر است به صفحه لاگین هدایت شود
+    // این header() اکنون باید بدون مشکل کار کند.
+    header("Location: ../login.php");
     exit();
 }
 
 // --- گام ۴: رندر کردن HTML پنل ---
+// از اینجا به بعد خروجی HTML شروع می‌شود.
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -94,7 +85,7 @@ if (!$is_admin) {
     <div class="main-container">
         <header class="dashboard-header">
             <button id="hamburger-btn" class="hamburger-btn" aria-label="Toggle Menu">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"></path></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"></path></svg>
             </button>
             <h1 class="dashboard-title">پنل مدیریت</h1>
         </header>
