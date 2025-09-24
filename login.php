@@ -1,21 +1,17 @@
-<?php
-// login.php (نسخه نهایی - بدون JWT)
+// login.php (نسخه نهایی با تنظیمات صحیح کوکی)
 
+<?php
 /*
 =====================================================
     NovelWorld - Login Page
-    Version: 3.0 (Cookie-Session Based, No JWT)
+    Version: 3.1 (Final - Patched Cookie Settings)
 =====================================================
-    - این نسخه از سیستم JWT استفاده نمی‌کند.
-    - پس از ورود موفق، یک شناسه سشن امن در دیتابیس (جدول sessions)
-      ایجاد کرده و همان شناسه را در یک کوکی امن در مرورگر کاربر ذخیره می‌کند.
-    - این روش در محیط‌های سرورلس به خوبی کار می‌کند و ساده‌تر از JWT است.
+    - این نسخه شامل تنظیمات بهینه شده کوکی ('domain' و 'samesite')
+      برای اطمینان از ارسال صحیح آن در تمام مرورگرها و پلتفرم‌ها است.
 */
 
 // --- گام ۱: فراخوانی فایل اتصال به دیتابیس ---
 require_once 'db_connect.php';
-
-// دیگر نیازی به autoload.php یا کتابخانه JWT نیست.
 
 // --- گام ۲: آماده‌سازی متغیرها ---
 $errors = [];
@@ -38,29 +34,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // بررسی صحت رمز عبور
             if ($user && password_verify($password, $user['password_hash'])) {
-                // --- بخش جدید: ایجاد سشن در دیتابیس ---
+                // --- بخش ایجاد سشن در دیتابیس ---
 
-                // ۱. ایجاد یک شناسه سشن یکتا، طولانی و امن
-                // bin2hex(random_bytes(32)) یک رشته ۶۴ کاراکتری تصادفی می‌سازد.
+                // ۱. ایجاد یک شناسه سشن امن و تصادفی
                 $session_id = bin2hex(random_bytes(32)); 
                 
                 // ۲. تعیین تاریخ انقضا برای ۷ روز آینده
-                $expires_at_timestamp = time() + (3600 * 24 * 7);
+                $expires_at_timestamp = time() + (3600 * 24 * 7); // 7 days
                 $expires_at_db_format = date('Y-m-d H:i:s', $expires_at_timestamp);
 
-                // ۳. ذخیره سشن جدید در جدول `sessions` دیتابیس
+                // ۳. ذخیره سشن جدید در دیتابیس
                 $stmt_session = $conn->prepare("INSERT INTO sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
                 $stmt_session->execute([$session_id, $user['id'], $expires_at_db_format]);
                 
-                // ۴. تنظیم کوکی در مرورگر کاربر با همان شناسه سشن
-                setcookie("user_session", $session_id, [
+                // --- ۴. تنظیم کوکی با پارامترهای اصلاح شده و بهینه ---
+                $cookie_options = [
                     'expires' => $expires_at_timestamp,
                     'path' => '/',
-                    'domain' => '', 
-                    'secure' => true,   // ضروری برای Render
-                    'httponly' => true, // جلوگیری از دسترسی جاوااسکریپت (مهم برای امنیت)
-                    'samesite' => 'Strict'
-                ]);
+                    //'domain' => $_SERVER['HTTP_HOST'], // خالی گذاشتن domain معمولاً سازگارتر است
+                    'secure' => true,   // ضروری برای HTTPS
+                    'httponly' => true, // جلوگیری از دسترسی جاوااسکریپت
+                    'samesite' => 'Lax' // استاندارد مدرن برای سشن‌ها
+                ];
+                setcookie("user_session", $session_id, $cookie_options);
                 
                 // ۵. هدایت کاربر به صفحه پروفایل
                 header("Location: profile.php");
@@ -70,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = "نام کاربری یا رمز عبور اشتباه است.";
             }
         } catch (PDOException $e) {
-            error_log("Login DB Error: " . $e->getMessage());
+            error_log("Login DB Error: ". $e->getMessage());
             $errors[] = "خطای دیتابیس. لطفاً بعداً تلاش کنید.";
         }
     }
