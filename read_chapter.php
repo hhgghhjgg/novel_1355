@@ -3,58 +3,60 @@
 
 /*
 =====================================================
-    NovelWorld - Chapter Reader Page (Multi-Type)
-    Version: 2.1 (Final, Unabridged)
+    NovelWorld - Chapter Reader Page (Admin Preview Ready)
+    Version: 2.2 (Final, Unabridged)
 =====================================================
-    - این صفحه به صورت هوشمند محتوای چپتر را بر اساس نوع اثر (متنی یا تصویری) نمایش می‌دهد.
-    - کاملاً مستقل عمل می‌کند و هدر/فوتر اصلی سایت را فراخوانی نمی‌کند.
 */
 
-// --- گام ۱: فراخوانی فایل اتصال به دیتابیس ---
-require_once 'db_connect.php';
+// --- گام ۱: فراخوانی فایل هسته برای اتصال و احراز هویت ---
+require_once 'core.php';
 
-// --- گام ۲: منطق احراز هویت (برای بخش نظرات) ---
-$is_logged_in = false;
-$user_id = null;
-$username = 'کاربر مهمان';
-if (isset($_COOKIE['user_session'])) {
-    $session_id = $_COOKIE['user_session'];
-    try {
-        $stmt_auth = $conn->prepare("SELECT u.id, u.username FROM users u JOIN sessions s ON u.id = s.user_id WHERE s.session_id = ? AND s.expires_at > NOW()");
-        $stmt_auth->execute([$session_id]);
-        $user = $stmt_auth->fetch();
-        if ($user) {
-            $is_logged_in = true;
-            $user_id = $user['id'];
-            $username = $user['username'];
-        }
-    } catch (PDOException $e) {
-        error_log("Reader Auth Error: " . $e->getMessage());
-    }
-}
 
-// --- گام ۳: واکشی اطلاعات چپتر و نوع اثر ---
+// --- گام ۲: دریافت ID و بررسی حالت پیش‌نمایش ---
 $chapter_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($chapter_id <= 0) die("شناسه چپتر نامعتبر است.");
 
+// بررسی می‌کنیم که آیا کاربر ادمین است و آیا در حالت پیش‌نمایش قرار دارد.
+$is_admin = false;
+if ($is_logged_in) {
+    try {
+        $stmt_role = $conn->prepare("SELECT role FROM users WHERE id = ?");
+        $stmt_role->execute([$user_id]);
+        $user_role = $stmt_role->fetchColumn();
+        if ($user_role === 'admin') {
+            $is_admin = true;
+        }
+    } catch (PDOException $e) {
+        $is_admin = false;
+    }
+}
+$is_preview_mode = (isset($_GET['preview']) && $_GET['preview'] === 'true' && $is_admin);
+
+
+// --- گام ۳: واکشی اطلاعات چپتر با کوئری شرطی ---
 try {
-    // واکشی اطلاعات چپتر به همراه نوع و عنوان ناول والد
-    $stmt = $conn->prepare(
-        "SELECT c.*, n.title as novel_title, n.type as novel_type
-         FROM chapters c 
-         JOIN novels n ON c.novel_id = n.id 
-         WHERE c.id = ?"
-    );
+    // ساخت بخش WHERE کوئری به صورت داینامیک
+    $base_sql = "SELECT c.*, n.title as novel_title, n.type as novel_type
+                 FROM chapters c 
+                 JOIN novels n ON c.novel_id = n.id 
+                 WHERE c.id = ?";
+    
+    $sql = $is_preview_mode ? $base_sql : $base_sql . " AND c.status = 'approved'";
+    
+    $stmt = $conn->prepare($sql);
     $stmt->execute([$chapter_id]);
     $chapter = $stmt->fetch();
-    if (!$chapter) die("چپتر یافت نشد.");
 
-    // واکشی چپتر قبلی و بعدی
-    $stmt_prev = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number < ? ORDER BY chapter_number DESC LIMIT 1");
+    if (!$chapter) {
+        die("چپتر مورد نظر یافت نشد یا هنوز منتشر نشده است.");
+    }
+
+    // واکشی چپتر قبلی و بعدی (فقط چپترهای تایید شده)
+    $stmt_prev = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number < ? AND status = 'approved' ORDER BY chapter_number DESC LIMIT 1");
     $stmt_prev->execute([$chapter['novel_id'], $chapter['chapter_number']]);
     $prev_chapter = $stmt_prev->fetch();
 
-    $stmt_next = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number > ? ORDER BY chapter_number ASC LIMIT 1");
+    $stmt_next = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number > ? AND status = 'approved' ORDER BY chapter_number ASC LIMIT 1");
     $stmt_next->execute([$chapter['novel_id'], $chapter['chapter_number']]);
     $next_chapter = $stmt_next->fetch();
 
@@ -78,13 +80,19 @@ if (!$is_text_based) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($chapter['novel_title']) . ' - ' . htmlspecialchars($chapter['title']); ?></title>
+    <title><?php echo ($is_preview_mode ? '[پیش‌نمایش] ' : '') . htmlspecialchars($chapter['novel_title']) . ' - ' . htmlspecialchars($chapter['title']); ?></title>
     <link rel="stylesheet" href="reader-style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Lalezar&family=Amiri:wght@400;700&family=Markazi+Text:wght@400;500;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body class="theme-dark font-vazirmatn" data-chapter-id="<?php echo $chapter['id']; ?>">
+
+    <?php if ($is_preview_mode): ?>
+        <div style="background-color: #ffa000; color: black; text-align: center; padding: 5px; font-weight: bold; position: sticky; top: 0; z-index: 10000;">
+            حالت پیش‌نمایش مدیر - <a href="approve_chapters.php" style="color: black;">بازگشت به پنل</a>
+        </div>
+    <?php endif; ?>
 
     <header class="reader-bar top-bar">
         <a href="novel_detail.php?id=<?php echo $chapter['novel_id']; ?>" class="bar-btn back-btn" title="بازگشت به صفحه ناول">
@@ -178,6 +186,7 @@ if (!$is_text_based) {
         const USER_IS_LOGGED_IN = <?php echo json_encode($is_logged_in); ?>;
         const CURRENT_USER_ID = <?php echo json_encode($user_id); ?>;
         const CURRENT_USERNAME = <?php echo json_encode($username); ?>;
+        const IS_ADMIN = <?php echo json_encode($is_admin); ?>;
     </script>
     <script src="reader-script.js"></script>
 </body>
