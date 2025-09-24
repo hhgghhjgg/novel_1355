@@ -1,6 +1,6 @@
+<?php
 // admin/header.php (نسخه نهایی و مستقل)
 
-<?php
 /*
 =====================================================
     NovelWorld - Admin Panel Header (Final Version)
