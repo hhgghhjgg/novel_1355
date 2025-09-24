@@ -1,123 +1,102 @@
-// login.php (نسخه نهایی با تنظیمات صحیح کوکی)
+// admin/header.php (نسخه نهایی و مستقل)
 
 <?php
 /*
 =====================================================
-    NovelWorld - Login Page
-    Version: 3.1 (Final - Patched Cookie Settings)
+    NovelWorld - Admin Panel Header (Final Version)
 =====================================================
-    - این نسخه شامل تنظیمات بهینه شده کوکی ('domain' و 'samesite')
-      برای اطمینان از ارسال صحیح آن در تمام مرورگرها و پلتفرم‌ها است.
+    - این فایل دروازه ورود به کل پنل ادمین است.
+    - این نسخه به صورت مستقل عمل کرده و تمام منطق لازم برای احراز هویت
+      و بررسی نقش ادمین را در خود دارد.
 */
 
 // --- گام ۱: فراخوانی فایل اتصال به دیتابیس ---
-require_once 'db_connect.php';
+// ما مستقیماً به اتصال دیتابیس نیاز داریم.
+require_once __DIR__ . '/../db_connect.php';
 
-// --- گام ۲: آماده‌سازی متغیرها ---
-$errors = [];
-$username_input = '';
+// --- گام ۲: منطق کامل احراز هویت و بررسی نقش ادمین ---
 
-// --- گام ۳: پردازش فرم ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username_input = trim($_POST['username']);
-    $password = $_POST['password'];
+$is_logged_in = false;
+$is_admin = false;
+$user_id = null;
+$username = '';
 
-    // اعتبارسنجی اولیه
-    if (empty($username_input) || empty($password)) {
-        $errors[] = "نام کاربری/ایمیل و رمز عبور الزامی است.";
-    } else {
-        try {
-            // جستجوی کاربر در دیتابیس
-            $stmt = $conn->prepare("SELECT id, username, password_hash FROM users WHERE username = ? OR email = ?");
-            $stmt->execute([$username_input, $username_input]);
-            $user = $stmt->fetch();
+// ۱. بررسی کوکی سشن
+if (isset($_COOKIE['user_session'])) {
+    $session_id = $_COOKIE['user_session'];
+    
+    try {
+        // ۲. پیدا کردن کاربر از طریق سشن
+        // ما مستقیماً نقش (role) کاربر را هم در همین کوئری واکشی می‌کنیم.
+        $stmt = $conn->prepare(
+            "SELECT u.id, u.username, u.role 
+             FROM users u 
+             JOIN sessions s ON u.id = s.user_id 
+             WHERE s.session_id = ? AND s.expires_at > NOW()"
+        );
+        $stmt->execute([$session_id]);
+        $user = $stmt->fetch();
+        
+        if ($user) {
+            $is_logged_in = true;
+            $user_id = $user['id'];
+            $username = htmlspecialchars($user['username']);
 
-            // بررسی صحت رمز عبور
-            if ($user && password_verify($password, $user['password_hash'])) {
-                // --- بخش ایجاد سشن در دیتابیس ---
-
-                // ۱. ایجاد یک شناسه سشن امن و تصادفی
-                $session_id = bin2hex(random_bytes(32)); 
-                
-                // ۲. تعیین تاریخ انقضا برای ۷ روز آینده
-                $expires_at_timestamp = time() + (3600 * 24 * 7); // 7 days
-                $expires_at_db_format = date('Y-m-d H:i:s', $expires_at_timestamp);
-
-                // ۳. ذخیره سشن جدید در دیتابیس
-                $stmt_session = $conn->prepare("INSERT INTO sessions (session_id, user_id, expires_at) VALUES (?, ?, ?)");
-                $stmt_session->execute([$session_id, $user['id'], $expires_at_db_format]);
-                
-                // --- ۴. تنظیم کوکی با پارامترهای اصلاح شده و بهینه ---
-                $cookie_options = [
-                    'expires' => $expires_at_timestamp,
-                    'path' => '/',
-                    //'domain' => $_SERVER['HTTP_HOST'], // خالی گذاشتن domain معمولاً سازگارتر است
-                    'secure' => true,   // ضروری برای HTTPS
-                    'httponly' => true, // جلوگیری از دسترسی جاوااسکریپت
-                    'samesite' => 'Lax' // استاندارد مدرن برای سشن‌ها
-                ];
-                setcookie("user_session", $session_id, $cookie_options);
-                
-                // ۵. هدایت کاربر به صفحه پروفایل
-                header("Location: profile.php");
-                exit();
-
-            } else {
-                $errors[] = "نام کاربری یا رمز عبور اشتباه است.";
+            // ۳. بررسی می‌کنیم که آیا نقش کاربر 'admin' است یا نه
+            if ($user['role'] === 'admin') {
+                $is_admin = true;
             }
-        } catch (PDOException $e) {
-            error_log("Login DB Error: ". $e->getMessage());
-            $errors[] = "خطای دیتابیس. لطفاً بعداً تلاش کنید.";
         }
+    } catch (PDOException $e) {
+        // در صورت بروز خطا، کاربر به عنوان ادمین شناخته نمی‌شود.
+        error_log("Admin Header Auth Error: " . $e->getMessage());
     }
 }
+
+// --- گام ۳: محافظت نهایی از پنل ادمین ---
+// اگر کاربر ادمین نباشد (چه لاگین نکرده باشد و چه کاربر عادی باشد)،
+// او را از پنل خارج می‌کنیم.
+if (!$is_admin) {
+    header("Location: ../login.php"); // بهتر است به صفحه لاگین هدایت شود
+    exit();
+}
+
+// --- گام ۴: رندر کردن HTML پنل ---
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورود به حساب کاربری - NovelWorld</title>
-    <link rel="stylesheet" href="auth-style.css">
+    <link rel="stylesheet" href="admin-style.css"> 
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
-    <div class="auth-page-wrapper">
-        <div class="auth-showcase">
-             <div>
-                <h1 class="showcase-logo">Novel<span>World</span></h1>
-                <p class="showcase-text">دنیای خود را بنویس، داستان خود را به اشتراک بگذار.</p>
-            </div>
-        </div>
-
-        <div class="auth-container">
-            <form action="login.php" method="POST" class="auth-form">
-                <h2>ورود به حساب</h2>
-
-                <?php if (isset($_GET['status']) && $_GET['status'] === 'success'): ?>
-                    <div class="success-box">ثبت‌نام شما با موفقیت انجام شد. اکنون می‌توانید وارد شوید.</div>
-                <?php endif; ?>
-                
-                <?php if (!empty($errors)): ?>
-                    <div class="error-box">
-                        <?php foreach ($errors as $error): ?>
-                            <p><?php echo htmlspecialchars($error); ?></p>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-
-                <div class="form-group">
-                    <label for="username">نام کاربری یا ایمیل:</label>
-                    <input type="text" id="username" name="username" value="<?php echo htmlspecialchars($username_input); ?>" required>
+<body class="dashboard-body">
+    <aside id="sidebar-menu" class="sidebar">
+        <div class="sidebar-header">
+            <a href="../profile.php" class="sidebar-profile-link">
+                <div class="sidebar-profile-picture" style="background-color: #d32f2f;">
+                    <span><?php echo mb_substr($username, 0, 1, "UTF-8"); ?></span>
                 </div>
-                <div class="form-group">
-                    <label for="password">رمز عبور:</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                <button type="submit" class="btn-auth">ورود</button>
-                <p class="switch-form">حساب کاربری ندارید؟ <a href="register.php">ثبت‌نام کنید</a></p>
-            </form>
+                <h4 class="sidebar-username"><?php echo $username; ?> (ادمین)</h4>
+            </a>
         </div>
-    </div>
-</body>
-</html>
+        <nav class="sidebar-nav">
+            <a href="index.php">داشبورد اصلی</a>
+            <a href="approve_chapters.php">تایید چپترها</a>
+            <a href="manage_novels.php">مدیریت آثار</a>
+            <a href="manage_users.php">مدیریت کاربران</a>
+            <hr style="border-color: var(--dash-border); margin: 10px 0;">
+            <a href="../index.php">بازگشت به سایت</a>
+            <a href="../logout.php" style="color: #ff8a8a;">خروج</a>
+        </nav>
+    </aside>
+    <div class="main-container">
+        <header class="dashboard-header">
+            <button id="hamburger-btn" class="hamburger-btn" aria-label="Toggle Menu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"></path></svg>
+            </button>
+            <h1 class="dashboard-title">پنل مدیریت</h1>
+        </header>
+        <main class="dashboard-content">
+            <!-- محتوای اصلی هر صفحه از پنل ادمین در اینجا قرار می‌گیرد -->
