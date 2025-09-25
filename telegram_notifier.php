@@ -1,6 +1,6 @@
+<?php
 // telegram_notifier.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Telegram Notifier Module
