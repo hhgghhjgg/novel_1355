@@ -1,6 +1,6 @@
+<?php
 // dashboard/index.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Dashboard Index Page
