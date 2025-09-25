@@ -1,0 +1,202 @@
+/* admin/admin-style.css */
+
+/*
+=====================================================
+    NovelWorld - Admin Panel Stylesheet
+    Version: 1.0
+=====================================================
+*/
+
+/* --- گام ۱: تعریف متغیرهای رنگی اختصاصی پنل ادمین --- */
+/* ما از رنگ‌های مشابه داشبورد نویسندگی استفاده می‌کنیم اما
+   رنگ اصلی (primary) را به قرمز تغییر می‌دهیم تا حس "مدیریت" را القا کند. */
+:root {
+    --dash-bg: #1a1a20;
+    --dash-surface: #2a2a32;
+    --dash-border: #3a3a42;
+    --dash-text: #e0e0e0;
+    --dash-text-secondary: #a0a0a0;
+    --primary-color: #e53935; /* قرمز برای ادمین */
+    --primary-hover-color: #c62828;
+    --font-family: 'Vazirmatn', sans-serif;
+}
+
+/* --- گام ۲: استایل‌های پایه (مشابه داشبورد) --- */
+body.dashboard-body {
+    background-color: var(--dash-bg);
+    color: var(--dash-text);
+    font-family: var(--font-family);
+    margin: 0;
+    direction: rtl;
+    overflow-x: hidden;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+hr {
+    border: none;
+    border-top: 1px solid var(--dash-border);
+    margin: 10px 0;
+}
+
+/* --- گام ۳: ساختار اصلی و سایدبار (Sidebar) --- */
+.dashboard-container {
+    display: flex;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: var(--dash-surface);
+    height: 100vh;
+    position: fixed;
+    right: 0;
+    top: 0;
+    border-left: 1px solid var(--dash-border);
+    z-index: 1001;
+    transition: transform 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+}
+.sidebar-header {
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid var(--dash-border);
+    flex-shrink: 0;
+}
+.sidebar-profile-link { text-decoration: none; color: var(--dash-text); }
+.sidebar-profile-picture {
+    width: 80px; height: 80px; border-radius: 50%;
+    color: var(--dash-bg); display: inline-flex; justify-content: center; align-items: center;
+    font-size: 2rem; font-weight: 700; margin-bottom: 10px;
+}
+.sidebar-username { font-size: 1.1rem; margin: 0; }
+
+.sidebar-nav { 
+    display: flex; 
+    flex-direction: column; 
+    padding: 15px;
+    flex-grow: 1;
+}
+.sidebar-nav a {
+    padding: 12px 15px;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    color: var(--dash-text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+.sidebar-nav a:hover { 
+    background-color: var(--dash-border); 
+    color: var(--dash-text); 
+}
+.sidebar-nav a.active { 
+    background-color: var(--primary-color); 
+    color: white; 
+    font-weight: 700;
+}
+
+/* --- گام ۴: کانتینر اصلی و هدر --- */
+.main-container {
+    flex-grow: 1;
+    margin-right: 250px;
+    transition: margin-right 0.3s ease-in-out;
+}
+.dashboard-header {
+    background-color: var(--dash-surface);
+    padding: 0 20px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--dash-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.hamburger-btn { 
+    background: none; 
+    border: none; 
+    color: var(--dash-text); 
+    cursor: pointer; 
+    padding: 10px;
+    font-size: 1.5rem;
+}
+.dashboard-title { 
+    font-size: 1.5rem; 
+    margin: 0 15px 0 0;
+}
+
+.dashboard-content {
+    padding: 30px;
+}
+
+/* --- گام ۵: استایل‌های عمومی عناصر UI --- */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.page-header h2 { margin: 0; }
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 700;
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover-color);
+}
+.btn-secondary {
+    background-color: var(--dash-border);
+    color: var(--dash-text-secondary);
+}
+
+/* --- گام ۶: واکنش‌گرایی برای موبایل --- */
+@media (max-width: 768px) {
+    body.sidebar-collapsed .sidebar {
+        transform: translateX(100%);
+    }
+    .sidebar {
+        transform: translateX(0);
+    }
+    body.sidebar-collapsed .main-container {
+        margin-right: 0;
+    }
+    .main-container {
+        margin-right: 250px;
+    }
+}
+body.sidebar-collapsed .main-container {
+    margin-right: 0;
+}
+body.sidebar-collapsed .sidebar {
+    transform: translateX(100%);
+}
+
+/* استایل‌های اضافه شده برای صفحات مدیریت */
+.form-container, .table-container {
+    background-color: var(--dash-surface);
+    border-radius: 12px;
+    padding: 20px;
+    overflow-x: auto;
+}
