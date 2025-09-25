@@ -16,7 +16,7 @@
 
 // فراخوانی هدر داشبورد برای دسترسی به اتصال دیتابیس ($conn)
 // و اطلاعات کاربر لاگین کرده ($is_logged_in, $user_id)
-require_once 'header.php';
+require_once 'core.php';
 
 // بررسی می‌کنیم که کاربر لاگین کرده باشد
 if (!$is_logged_in) {
