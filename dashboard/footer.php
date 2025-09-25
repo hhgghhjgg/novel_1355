@@ -1,6 +1,6 @@
+<?php
 // dashboard/footer.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Dashboard Footer
