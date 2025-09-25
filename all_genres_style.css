@@ -1,0 +1,183 @@
+/* all_genres_style.css */
+
+/*
+=====================================================
+    NovelWorld - All Genres Page Stylesheet
+    Version: 1.0 (Professional UI)
+=====================================================
+*/
+
+/* --- گام ۱: بخش هیرو (Hero) صفحه ژانرها --- */
+.genres-page {
+    /* ما از padding-bottom استفاده می‌کنیم تا فاصله مناسبی از فوتر ایجاد شود */
+    padding-bottom: 50px;
+}
+
+.genres-hero {
+    position: relative;
+    height: 50vh; /* ارتفاع به اندازه نصف صفحه نمایش */
+    min-height: 350px; /* حداقل ارتفاع برای دستگاه‌های کوچک */
+    /* تصویر پس‌زمینه با یک لایه تیره برای خوانایی بهتر متن */
+    background-image: linear-gradient(rgba(19, 17, 11, 0.7), rgba(19, 17, 11, 0.7)), url('https://images.unsplash.com/photo-1534447677768-64483a0f78d6?q=80&w=1974');
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: white;
+    padding: 20px;
+}
+
+.hero-content h1 {
+    font-size: 3rem;
+    font-weight: 800;
+    text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+    margin: 0;
+}
+
+.hero-content p {
+    font-size: 1.2rem;
+    max-width: 500px;
+    margin: 10px 0 30px 0;
+    opacity: 0.9;
+    line-height: 1.6;
+}
+
+/* --- گام ۲: باکس جستجوی زیبا و مدرن --- */
+.genres-search-box {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+}
+
+.genres-search-box input {
+    width: 100%;
+    padding: 16px 25px 16px 60px; /* فاصله داخلی برای متن و آیکون */
+    background-color: rgba(28, 26, 20, 0.7); /* رنگ نیمه‌شفاف */
+    border: 1px solid var(--border-color);
+    border-radius: 50px; /* کاملاً گرد */
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 1rem;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    backdrop-filter: blur(5px);
+}
+
+.genres-search-box input::placeholder {
+    color: var(--text-secondary-color);
+}
+
+.genres-search-box input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background-color: rgba(28, 26, 20, 0.9);
+    box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.2);
+}
+
+.genres-search-box .search-icon {
+    position: absolute;
+    top: 50%;
+    left: 20px; /* در سمت چپ برای زبان‌های راست‌چین */
+    transform: translateY(-50%);
+    color: var(--text-secondary-color);
+    pointer-events: none; /* اجازه می‌دهد روی اینپوت زیر آیکون کلیک شود */
+    font-size: 28px;
+    transition: color 0.3s;
+}
+
+.genres-search-box input:focus + .search-icon {
+    color: var(--primary-color);
+}
+
+/* --- گام ۳: گرید و کارت‌های ژانر با افکت‌های زیبا --- */
+.genres-grid-container {
+    max-width: 1200px;
+    margin: -60px auto 0 auto; /* حاشیه منفی برای اینکه گرید کمی روی بخش هیرو قرار بگیرد */
+    padding: 0 20px;
+    position: relative;
+    z-index: 2;
+}
+
+.genre-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 20px;
+}
+
+.genre-card {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: var(--text-color);
+    aspect-ratio: 1 / 1; /* کارت‌ها را همیشه مربع نگه می‌دارد */
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
+}
+
+.genre-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    border-color: var(--primary-color);
+}
+
+.genre-icon {
+    font-size: 52px;
+    color: var(--primary-color);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* افکت فنری */
+}
+
+.genre-card:hover .genre-icon {
+    transform: scale(1.15);
+}
+
+.genre-name {
+    margin-top: 15px;
+    font-weight: 500;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.no-results-message {
+    grid-column: 1 / -1; /* تمام عرض گرید را اشغال کند */
+    text-align: center;
+    padding: 50px;
+    color: var(--text-secondary-color);
+    background: var(--surface-color);
+    border-radius: 12px;
+    border: 1px dashed var(--border-color);
+}
+.no-results-message h3 {
+    margin: 0;
+    color: var(--text-color);
+}
+
+/* --- گام ۴: واکنش‌گرایی برای موبایل --- */
+@media (max-width: 600px) {
+    .hero-content h1 {
+        font-size: 2rem;
+    }
+    .hero-content p {
+        font-size: 1rem;
+    }
+    .genres-grid-container {
+        margin-top: -40px;
+    }
+    .genre-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 15px;
+    }
+    .genre-icon {
+        font-size: 40px;
+    }
+    .genre-name {
+        font-size: 1rem;
+    }
+}
