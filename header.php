@@ -58,11 +58,6 @@ if (isset($_COOKIE['user_session'])) {
 </head>
 <body>
     
-    <!-- نشانه بصری برای دیباگ کردن: این متن باید در بالای سایت شما نمایش داده شود. -->
-    <h1 style="color: lime; text-align: center; font-size: 16px; padding: 5px; background: black;">
-        Header Version: 3.0 (Cookie-Session, No JWT)
-    </h1>
-
     <aside id="sidebar-menu" class="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-profile-picture">
