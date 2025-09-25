@@ -2,11 +2,12 @@
 /*
 =====================================================
     NovelWorld - Admin Panel Header (Final Version)
-    Version: 2.0 (with Dedicated Login Logic)
+    Version: 2.1
 =====================================================
     - این فایل به عنوان دروازه ورود به کل پنل ادمین عمل می‌کند.
     - در صورت عدم احراز هویت به عنوان ادمین، کاربر را به صفحه لاگین
       اختصاصی پنل مدیریت (admin/login.php) هدایت می‌کند.
+    - شامل منوی ناوبری کامل پنل ادمین است.
 */
 
 // --- گام ۱: فراخوانی فایل اتصال به دیتابیس از ریشه پروژه ---
@@ -22,8 +23,7 @@ if (isset($_COOKIE['user_session'])) {
     $session_id = $_COOKIE['user_session'];
     
     try {
-        // ۲. پیدا کردن کاربر از طریق سشن
-        // ما مستقیماً نقش (role) کاربر را هم در همین کوئری واکشی می‌کنیم.
+        // ۲. پیدا کردن کاربر از طریق سشن و واکشی نقش (role) او
         $stmt = $conn->prepare(
             "SELECT u.id, u.username, u.role 
              FROM users u 
@@ -42,15 +42,13 @@ if (isset($_COOKIE['user_session'])) {
             }
         }
     } catch (PDOException $e) {
-        // در صورت بروز خطا، کاربر به عنوان ادمین شناخته نمی‌شود.
         error_log("Admin Header Auth Error: " . $e->getMessage());
     }
 }
 
 // --- گام ۳: محافظت نهایی از پنل ادمین ---
-// اگر کاربر ادمین نباشد، او را از پنل خارج می‌کنیم.
 if (!$is_admin) {
-    // *** تغییر کلیدی: هدایت به صفحه لاگین اختصاصی ادمین ***
+    // اگر کاربر ادمین نباشد، او را به صفحه لاگین اختصاصی ادمین هدایت می‌کنیم.
     header("Location: login.php");
     exit();
 }
@@ -69,7 +67,7 @@ if (!$is_admin) {
 <body class="dashboard-body">
     <aside id="sidebar-menu" class="sidebar">
         <div class="sidebar-header">
-            <a href="../profile.php" class="sidebar-profile-link">
+            <a href="../profile.php" class="sidebar-profile-link" title="مشاهده پروفایل عمومی">
                 <div class="sidebar-profile-picture" style="background-color: #d32f2f;">
                     <span><?php echo mb_substr($username, 0, 1, "UTF-8"); ?></span>
                 </div>
@@ -78,12 +76,18 @@ if (!$is_admin) {
         </div>
         <nav class="sidebar-nav">
             <a href="index.php">داشبورد اصلی</a>
+            <hr style="border-color: var(--dash-border); margin: 10px 0;">
+            <h5 style="padding: 0 15px 10px; color: var(--dash-text-secondary); font-size: 0.8rem;">مدیریت محتوا</h5>
             <a href="approve_chapters.php">تایید چپترها</a>
-            <a href="manage_novels.php">مدیریت آثار</a>
+            <a href="manage_novels.php">مدیریت کل آثار</a>
+            <!-- لینک جدید برای افزودن اثر ترجمه شده -->
+            <a href="add_translated_work.php">افزودن اثر ترجمه شده</a>
+            <hr style="border-color: var(--dash-border); margin: 10px 0;">
+            <h5 style="padding: 0 15px 10px; color: var(--dash-text-secondary); font-size: 0.8rem;">مدیریت کاربران</h5>
             <a href="manage_users.php">مدیریت کاربران</a>
             <hr style="border-color: var(--dash-border); margin: 10px 0;">
             <a href="../index.php">بازگشت به سایت</a>
-            <a href="../logout.php" style="color: #ff8a8a;">خروج</a>
+            <a href="../logout.php" style="color: #ff8a8a;">خروج از حساب</a>
         </nav>
     </aside>
     <div class="main-container">
@@ -94,4 +98,4 @@ if (!$is_admin) {
             <h1 class="dashboard-title">پنل مدیریت</h1>
         </header>
         <main class="dashboard-content">
-            <!-- محتوای اصلی هر صفحه از پنل ادمین در اینجا قرار می‌گیرد -->```
+            <!-- محتوای اصلی هر صفحه از پنل ادمین در اینجا قرار می‌گیرد -->
