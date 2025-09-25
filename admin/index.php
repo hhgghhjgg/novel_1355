@@ -4,42 +4,42 @@
 /*
 =====================================================
     NovelWorld - Admin Dashboard Index
-    Version: 1.0
+    Version: 1.1 (With Translation Stats)
 =====================================================
     - این صفحه به عنوان صفحه اصلی پنل مدیریت عمل می‌کند.
-    - آمارهای کلیدی و مهم سایت را برای مدیر نمایش می‌دهد.
-    - دسترسی به این صفحه فقط برای کاربران با نقش 'admin' مجاز است.
+    - آمارهای کلیدی سایت، شامل تفکیک آثار تالیفی و ترجمه شده را نمایش می‌دهد.
 */
 
 // --- گام ۱: فراخوانی هدر پنل مدیریت ---
-// این فایل مسئولیت احراز هویت و بررسی نقش ادمین را بر عهده دارد.
-// همچنین ساختار بصری (سایدبار و هدر) را رندر می‌کند.
 require_once 'header.php';
 
 
 // --- گام ۲: واکشی آمار کلی از دیتابیس ---
 $stats = [
     'pending_chapters' => 0,
-    'approved_chapters' => 0,
     'total_users' => 0,
-    'total_novels' => 0
+    'total_novels' => 0,
+    'original_works' => 0,
+    'translated_works' => 0,
 ];
 
 try {
     // شمارش چپترهای در انتظار تایید
     $stats['pending_chapters'] = $conn->query("SELECT COUNT(*) FROM chapters WHERE status = 'pending'")->fetchColumn();
     
-    // شمارش چپترهای تایید شده (منتشر شده)
-    $stats['approved_chapters'] = $conn->query("SELECT COUNT(*) FROM chapters WHERE status = 'approved'")->fetchColumn();
-
-    // شمارش کل کاربران ثبت‌نام کرده
+    // شمارش کل کاربران
     $stats['total_users'] = $conn->query("SELECT COUNT(*) FROM users")->fetchColumn();
     
-    // شمارش کل آثار (ناول، مانهوا، مانگا)
+    // شمارش کل آثار
     $stats['total_novels'] = $conn->query("SELECT COUNT(*) FROM novels")->fetchColumn();
 
+    // شمارش آثار تالیفی
+    $stats['original_works'] = $conn->query("SELECT COUNT(*) FROM novels WHERE origin = 'original'")->fetchColumn();
+
+    // شمارش آثار ترجمه شده
+    $stats['translated_works'] = $conn->query("SELECT COUNT(*) FROM novels WHERE origin = 'translated'")->fetchColumn();
+
 } catch (PDOException $e) {
-    // در صورت بروز خطا، یک پیام خطا نمایش داده می‌شود.
     error_log("Admin Dashboard Stats Error: " . $e->getMessage());
     die("خطایی در واکشی آمار سایت رخ داد.");
 }
@@ -64,6 +64,7 @@ try {
     text-decoration: none;
     color: var(--dash-text);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: block;
 }
 .stat-card:hover {
     transform: translateY(-5px);
@@ -80,21 +81,23 @@ try {
     font-weight: 700;
     line-height: 1;
 }
-/* استایل خاص برای کارت "در انتظار تایید" برای جلب توجه */
-.stat-card.pending {
-    border-left-color: #ffa000; /* نارنجی */
-}
-.stat-card.users {
-    border-left-color: #1e88e5; /* آبی */
-}
-.stat-card.novels {
-    border-left-color: #43a047; /* سبز */
-}
+/* استایل‌های رنگی برای تمایز کارت‌ها */
+.stat-card.pending { border-left-color: #ffa000; } /* نارنجی */
+.stat-card.users { border-left-color: #1e88e5; } /* آبی */
+.stat-card.originals { border-left-color: #43a047; } /* سبز */
+.stat-card.translated { border-left-color: #8e24aa; } /* بنفش */
+.quick-actions { display: flex; gap: 15px; flex-wrap: wrap; }
 </style>
 
 <div class="page-header">
     <h2>نمای کلی سایت</h2>
 </div>
+
+<?php if (isset($_GET['status']) && $_GET['status'] === 'work_added'): ?>
+    <div class="success-box" style="margin-bottom: 20px; background-color: #2e7d32; color: white; padding: 15px; border-radius: 8px;">
+        اثر ترجمه شده با موفقیت اضافه شد.
+    </div>
+<?php endif; ?>
 
 <div class="stat-grid">
     <a href="approve_chapters.php" class="stat-card pending">
@@ -102,17 +105,17 @@ try {
         <p class="stat-number"><?php echo $stats['pending_chapters']; ?></p>
     </a>
     
-    <a href="#" class="stat-card novels"> <!-- در آینده به manage_novels.php لینک می‌شود -->
-        <h3>مجموع کل آثار</h3>
-        <p class="stat-number"><?php echo $stats['total_novels']; ?></p>
+    <a href="manage_novels.php" class="stat-card originals">
+        <h3>آثار تالیفی</h3>
+        <p class="stat-number"><?php echo $stats['original_works']; ?></p>
     </a>
 
-    <a href="#" class="stat-card"> <!-- این کارت می‌تواند به لیستی از تمام چپترها لینک شود -->
-        <h3>چپترهای منتشر شده</h3>
-        <p class="stat-number"><?php echo $stats['approved_chapters']; ?></p>
+    <a href="manage_novels.php?origin=translated" class="stat-card translated">
+        <h3>آثار ترجمه شده</h3>
+        <p class="stat-number"><?php echo $stats['translated_works']; ?></p>
     </a>
     
-    <a href="#" class="stat-card users"> <!-- در آینده به manage_users.php لینک می‌شود -->
+    <a href="manage_users.php" class="stat-card users">
         <h3>تعداد کل کاربران</h3>
         <p class="stat-number"><?php echo $stats['total_users']; ?></p>
     </a>
@@ -122,8 +125,8 @@ try {
     <h2>دسترسی سریع</h2>
 </div>
 <div class="quick-actions">
-    <!-- در اینجا می‌توانید لینک‌هایی به کارهای پرتکرار اضافه کنید -->
-    <a href="../dashboard/create_novel.php" class="btn btn-primary">افزودن اثر جدید</a>
+    <a href="add_translated_work.php" class="btn btn-primary">افزودن اثر ترجمه شده</a>
+    <a href="../dashboard/create_novel.php" class="btn btn-secondary">افزودن اثر تالیفی (نمای کاربر)</a>
     <a href="approve_chapters.php" class="btn btn-secondary">بررسی چپترها</a>
 </div>
 
