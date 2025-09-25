@@ -1,6 +1,6 @@
+<?php
 // dashboard/header.php
 
-<?php
 /*
 =====================================================
     NovelWorld - Dashboard Header
