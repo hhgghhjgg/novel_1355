@@ -1,21 +1,28 @@
 <?php
-// novel_detail.php
-
 /*
 =====================================================
     NovelWorld - Novel Detail Page
     Version: 2.3 (Final, Unabridged, All Features & Patches)
 =====================================================
+    - این نسخه نهایی، تمام قابلیت‌های پیاده‌سازی شده را به صورت کامل در خود دارد.
+    - شامل منطق نمایش هوشمند چپترها برای نویسنده و کاربران عادی است.
+    - شامل UI جدید منوی سه نقطه برای مدیریت چپترها توسط نویسنده است.
+    - شامل سیستم کامل کتابخانه شخصی (افزودن/حذف) است.
+    - شامل بخش کامل نظرات و پاسخ‌ها با تمام جزئیات است.
 */
 
+// --- گام ۱: فراخوانی هدر اصلی سایت ---
 require_once 'header.php';
 
+// --- گام ۲: دریافت و اعتبارسنجی ID اثر ---
 $novel_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($novel_id <= 0) {
     die("<div style='text-align:center; padding: 50px; color: white;'>خطا: شناسه اثر نامعتبر است.</div>");
 }
 
+// --- گام ۳: واکشی جامع اطلاعات از دیتابیس ---
 try {
+    // ۱. واکشی اطلاعات اصلی ناول
     $stmt_novel = $conn->prepare("SELECT * FROM novels WHERE id = ?");
     $stmt_novel->execute([$novel_id]);
     $novel = $stmt_novel->fetch();
@@ -24,16 +31,21 @@ try {
         die("<div style='text-align:center; padding: 50px; color: white;'>خطا: اثری با این شناسه یافت نشد.</div>");
     }
 
+    // بررسی‌های شرطی اولیه
     $is_author = ($is_logged_in && $user_id == $novel['author_id']);
 
+    // ۲. واکشی لیست چپترها با منطق جدید
     if ($is_author) {
+        // اگر کاربر نویسنده اثر است، *تمام* چپترها را با وضعیتشان واکشی کن
         $stmt_chapters = $conn->prepare("SELECT id, chapter_number, title, created_at, status FROM chapters WHERE novel_id = ? ORDER BY chapter_number ASC");
     } else {
-        $stmt_chapters = $conn->prepare("SELECT id, chapter_number, title, created_at, status FROM chapters WHERE novel_id = ? AND status = 'approved' ORDER BY chapter_number ASC");
+        // اگر کاربر عادی است، *فقط* چپترهای تایید شده و زمان انتشار رسیده را واکشی کن
+        $stmt_chapters = $conn->prepare("SELECT id, chapter_number, title, created_at, status FROM chapters WHERE novel_id = ? AND status = 'approved' AND published_at <= NOW() ORDER BY chapter_number ASC");
     }
     $stmt_chapters->execute([$novel_id]);
     $chapters_list = $stmt_chapters->fetchAll(PDO::FETCH_ASSOC);
     
+    // ۳. واکشی نظرات و پاسخ‌های عمومی ناول (نه چپترها)
     $stmt_comments = $conn->prepare("SELECT * FROM comments WHERE novel_id = ? AND chapter_id IS NULL ORDER BY created_at ASC");
     $stmt_comments->execute([$novel_id]);
     $all_comments_results = $stmt_comments->fetchAll(PDO::FETCH_ASSOC);
@@ -43,6 +55,7 @@ try {
     die("<div style='text-align:center; padding: 50px; color: white;'>خطا در بارگذاری اطلاعات.</div>");
 }
 
+// ۴. پردازش نظرات
 $comments = [];
 $replies = [];
 foreach ($all_comments_results as $row) {
@@ -53,6 +66,7 @@ foreach ($all_comments_results as $row) {
     }
 }
 
+// ۵. بررسی وضعیت کتابخانه
 $is_in_library = false;
 if ($is_logged_in) {
     try {
@@ -66,31 +80,40 @@ if ($is_logged_in) {
     }
 }
 
+// ۶. آماده‌سازی متغیرهای کمکی
 $type_persian = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => 'مانگا'];
 $novel_type_persian = $type_persian[$novel['type']] ?? 'اثر';
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($novel['title']); ?> - NovelWorld</title>
     <link rel="stylesheet" href="detail-style.css">
     <style>
-    .hero-title { word-break: break-word; }
-    .btn-danger { background-color: #d32f2f; color: white; } 
-    .btn-danger:hover { background-color: #c62828; }
-    .chapter-item { display: flex; align-items: center; gap: 10px; }
-    .chapter-item > a { flex-grow: 1; }
-    .status-indicator { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .status-indicator.status-pending { background-color: #ffa000; }
-    .status-indicator.status-rejected { background-color: #d32f2f; }
-    .status-indicator.status-approved { background-color: #43a047; }
-    .chapter-actions-menu { position: relative; }
-    .menu-toggle-btn { background: none; border: none; color: var(--text-secondary-color); cursor: pointer; font-size: 1.5rem; padding: 0 10px; line-height: 1; }
-    .menu-dropdown { display: none; position: absolute; left: 0; top: 100%; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 10; width: 120px; overflow: hidden; }
-    .chapter-actions-menu:hover .menu-dropdown { display: block; }
-    .menu-dropdown a { display: block; padding: 10px 15px; color: var(--text-color); text-decoration: none; font-size: 0.9rem; }
-    .menu-dropdown a:hover { background-color: var(--border-color); }
-    .menu-dropdown a.delete-link { color: #ff8a8a; }
+        /* استایل‌های سفارشی برای رفع مشکلات و بهبود UI */
+        .hero-title { word-break: break-word; }
+        .btn-danger { background-color: #d32f2f; color: white; } 
+        .btn-danger:hover { background-color: #c62828; }
+        .chapter-item { display: flex; align-items: center; gap: 10px; }
+        .chapter-item > a { flex-grow: 1; }
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .status-indicator.status-pending { background-color: #ffa000; }
+        .status-indicator.status-rejected { background-color: #d32f2f; }
+        .status-indicator.status-approved { background-color: #43a047; }
+        .chapter-actions-menu { position: relative; }
+        .menu-toggle-btn { background: none; border: none; color: var(--text-secondary-color); cursor: pointer; font-size: 1.5rem; padding: 0 10px; line-height: 1; border-radius: 50%; transition: background-color 0.2s; }
+        .menu-toggle-btn:hover { background-color: var(--border-color); }
+        .menu-dropdown { display: none; position: absolute; left: 0; top: 100%; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 10; width: 120px; overflow: hidden; }
+        .chapter-actions-menu:hover .menu-dropdown { display: block; }
+        .menu-dropdown a { display: block; padding: 10px 15px; color: var(--text-color); text-decoration: none; font-size: 0.9rem; }
+        .menu-dropdown a:hover { background-color: var(--border-color); }
+        .menu-dropdown a.delete-link { color: #ff8a8a; }
+        .menu-dropdown a.delete-link:hover { background-color: rgba(255, 77, 77, 0.1); }
+        .success-box, .error-box { padding: 15px; margin-bottom: 20px; border-radius: 8px; border: 1px solid; text-align: center; }
+        .success-box { background-color: #2e7d32; color: white; }
+        .error-box { background-color: #d32f2f; color: white; }
     </style>
 </head>
 <body>
@@ -198,7 +221,7 @@ $novel_type_persian = $type_persian[$novel['type']] ?? 'اثر';
                 <p class="login-prompt"><a href="login.php">برای ثبت نظر، لطفاً وارد شوید.</a></p>
             <?php endif; ?>
 
-            <div id="comments-wrapper"> <!-- Wrapper for AJAX update -->
+            <div id="comments-wrapper">
                 <?php if (empty($comments)): ?>
                     <p>هنوز نظری ثبت نشده است.</p>
                 <?php else: ?>
@@ -212,7 +235,7 @@ $novel_type_persian = $type_persian[$novel['type']] ?? 'اثر';
                             <div class="comment-footer"><div class="actions">
                                 <button class="action-btn reply-btn"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 11h-4v-2h4v-2l4 3-4 3v-2zm10.28-5.22c-1.16-1.16-2.68-1.78-4.28-1.78s-3.12.62-4.28 1.78c-2.34 2.34-2.34 6.14 0 8.48l2.82-2.82c-.78-.78-.78-2.04 0-2.82s2.04-.78 2.82 0 2.04.78 2.82 0 .78-2.04 0-2.82l2.82-2.82zM4.1 20.28c-2.34-2.34-2.34-6.14 0-8.48l2.82 2.82c.78.78.78 2.04 0 2.82s-2.04-.78-2.82 0-2.04-.78-2.82 0-.78 2.04 0 2.82L4.1 20.28z"></path></svg><span>پاسخ</span></button>
                                 <button class="action-btn like-btn" data-action="like" data-comment-id="<?php echo $comment['id']; ?>"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"></path></svg><span><?php echo $comment['likes']; ?></span></button>
-                                <button class="action-btn dislike-btn" data-action="dislike" data-comment-id="<?php echo $comment['id']; ?>"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79-.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"></path></svg><span><?php echo $comment['dislikes']; ?></span></button>
+                                <button class="action-btn dislike-btn" data-action="dislike" data-comment-id="<?php echo $comment['id']; ?>"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41-.17-.79-.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"></path></svg><span><?php echo $comment['dislikes']; ?></span></button>
                             </div></div>
                             
                             <?php if (isset($replies[$comment['id']])): ?>
@@ -227,7 +250,7 @@ $novel_type_persian = $type_persian[$novel['type']] ?? 'اثر';
                                             <div class="comment-footer"><div class="actions">
                                                 <button class="action-btn reply-btn"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M10 11h-4v-2h4v-2l4 3-4 3v-2zm10.28-5.22c-1.16-1.16-2.68-1.78-4.28-1.78s-3.12.62-4.28 1.78c-2.34 2.34-2.34 6.14 0 8.48l2.82-2.82c-.78-.78-.78-2.04 0-2.82s2.04-.78 2.82 0 2.04.78 2.82 0 .78-2.04 0-2.82l2.82-2.82zM4.1 20.28c-2.34-2.34-2.34-6.14 0-8.48l2.82 2.82c.78.78.78 2.04 0 2.82s-2.04-.78-2.82 0-2.04-.78-2.82 0-.78 2.04 0 2.82L4.1 20.28z"></path></svg><span>پاسخ</span></button>
                                                 <button class="action-btn like-btn" data-action="like" data-comment-id="<?php echo $reply['id']; ?>"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"></path></svg><span><?php echo $reply['likes']; ?></span></button>
-                                                <button class="action-btn dislike-btn" data-action="dislike" data-comment-id="<?php echo $reply['id']; ?>"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41.17.79-.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"></path></svg><span><?php echo $reply['dislikes']; ?></span></button>
+                                                <button class="action-btn dislike-btn" data-action="dislike" data-comment-id="<?php echo $reply['id']; ?>"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M15 3H6c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2c0 1.1.9 2 2 2h6.31l-.95 4.57-.03.32c0 .41-.17-.79-.44 1.06L9.83 23l6.59-6.59c.36-.36.58-.86.58-1.41V5c0-1.1-.9-2-2-2zm4 0v12h4V3h-4z"></path></svg><span><?php echo $reply['dislikes']; ?></span></button>
                                             </div></div>
                                         </div>
                                     <?php endforeach; ?>
