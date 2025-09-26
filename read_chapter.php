@@ -1,10 +1,8 @@
 <?php
-// read_chapter.php
-
 /*
 =====================================================
     NovelWorld - Chapter Reader Page (Final, Unabridged)
-    Version: 2.2
+    Version: 2.3
 =====================================================
     - این نسخه نهایی و کامل، تمام قابلیت‌های صفحه خواندن، از جمله
       پیش‌نمایش مدیر و نمایش محتوای چند نوعی را پیاده‌سازی می‌کند.
@@ -15,8 +13,12 @@ require_once 'core.php';
 
 // --- گام ۲: دریافت ID و بررسی حالت پیش‌نمایش ---
 $chapter_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-if ($chapter_id <= 0) die("شناسه چپتر نامعتبر است.");
+if ($chapter_id <= 0) {
+    header('HTTP/1.0 400 Bad Request');
+    die("خطا: شناسه چپتر نامعتبر است.");
+}
 
+// بررسی می‌کنیم که آیا کاربر ادمین است.
 $is_admin = false;
 if ($is_logged_in) {
     try {
@@ -38,6 +40,7 @@ try {
                  JOIN novels n ON c.novel_id = n.id 
                  WHERE c.id = ?";
     
+    // اگر حالت پیش‌نمایش برای ادمین فعال نباشد، شرط وضعیت و تاریخ انتشار را اضافه می‌کنیم
     $sql = $is_preview_mode ? $base_sql : $base_sql . " AND c.status = 'approved' AND c.published_at <= NOW()";
     
     $stmt = $conn->prepare($sql);
@@ -45,10 +48,11 @@ try {
     $chapter = $stmt->fetch();
 
     if (!$chapter) {
+        header('HTTP/1.0 404 Not Found');
         die("چپتر مورد نظر یافت نشد، هنوز منتشر نشده یا در انتظار تایید است.");
     }
 
-    // واکشی چپتر قبلی و بعدی (فقط چپترهای منتشر شده)
+    // واکشی چپتر قبلی و بعدی (فقط چپترهای منتشر شده برای همه کاربران)
     $stmt_prev = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number < ? AND status = 'approved' AND published_at <= NOW() ORDER BY chapter_number DESC LIMIT 1");
     $stmt_prev->execute([$chapter['novel_id'], $chapter['chapter_number']]);
     $prev_chapter = $stmt_prev->fetch();
@@ -58,7 +62,9 @@ try {
     $next_chapter = $stmt_next->fetch();
 
 } catch (PDOException $e) {
-    die("خطای دیتابیس: " . $e->getMessage());
+    error_log("Reader Page DB Error: " . $e->getMessage());
+    header('HTTP/1.0 500 Internal Server Error');
+    die("خطای دیتابیس. لطفاً بعداً تلاش کنید.");
 }
 
 $is_text_based = ($chapter['novel_type'] === 'novel');
@@ -70,8 +76,6 @@ if (!$is_text_based) {
     }
 }
 ?>
-
-<!-- --- گام ۴: رندر کردن HTML صفحه --- -->
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
