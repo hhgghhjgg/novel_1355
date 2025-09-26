@@ -3,20 +3,20 @@
 
 /*
 =====================================================
-    NovelWorld - Chapter Reader Page (Admin Preview Ready)
-    Version: 2.2 (Final, Unabridged)
+    NovelWorld - Chapter Reader Page (Final, Unabridged)
+    Version: 2.2
 =====================================================
+    - این نسخه نهایی و کامل، تمام قابلیت‌های صفحه خواندن، از جمله
+      پیش‌نمایش مدیر و نمایش محتوای چند نوعی را پیاده‌سازی می‌کند.
 */
 
 // --- گام ۱: فراخوانی فایل هسته برای اتصال و احراز هویت ---
 require_once 'core.php';
 
-
 // --- گام ۲: دریافت ID و بررسی حالت پیش‌نمایش ---
 $chapter_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($chapter_id <= 0) die("شناسه چپتر نامعتبر است.");
 
-// بررسی می‌کنیم که آیا کاربر ادمین است و آیا در حالت پیش‌نمایش قرار دارد.
 $is_admin = false;
 if ($is_logged_in) {
     try {
@@ -26,37 +26,34 @@ if ($is_logged_in) {
         if ($user_role === 'admin') {
             $is_admin = true;
         }
-    } catch (PDOException $e) {
-        $is_admin = false;
-    }
+    } catch (PDOException $e) { /* خطا در بررسی نقش، کاربر ادمین در نظر گرفته نمی‌شود */ }
 }
 $is_preview_mode = (isset($_GET['preview']) && $_GET['preview'] === 'true' && $is_admin);
 
-
 // --- گام ۳: واکشی اطلاعات چپتر با کوئری شرطی ---
 try {
-    // ساخت بخش WHERE کوئری به صورت داینامیک
-    $base_sql = "SELECT c.*, n.title as novel_title, n.type as novel_type
+    $base_sql = "SELECT c.id, c.novel_id, c.chapter_number, c.title, c.content, c.cover_url as chapter_cover, 
+                        n.title as novel_title, n.type as novel_type
                  FROM chapters c 
                  JOIN novels n ON c.novel_id = n.id 
                  WHERE c.id = ?";
     
-    $sql = $is_preview_mode ? $base_sql : $base_sql . " AND c.status = 'approved'";
+    $sql = $is_preview_mode ? $base_sql : $base_sql . " AND c.status = 'approved' AND c.published_at <= NOW()";
     
     $stmt = $conn->prepare($sql);
     $stmt->execute([$chapter_id]);
     $chapter = $stmt->fetch();
 
     if (!$chapter) {
-        die("چپتر مورد نظر یافت نشد یا هنوز منتشر نشده است.");
+        die("چپتر مورد نظر یافت نشد، هنوز منتشر نشده یا در انتظار تایید است.");
     }
 
-    // واکشی چپتر قبلی و بعدی (فقط چپترهای تایید شده)
-    $stmt_prev = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number < ? AND status = 'approved' ORDER BY chapter_number DESC LIMIT 1");
+    // واکشی چپتر قبلی و بعدی (فقط چپترهای منتشر شده)
+    $stmt_prev = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number < ? AND status = 'approved' AND published_at <= NOW() ORDER BY chapter_number DESC LIMIT 1");
     $stmt_prev->execute([$chapter['novel_id'], $chapter['chapter_number']]);
     $prev_chapter = $stmt_prev->fetch();
 
-    $stmt_next = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number > ? AND status = 'approved' ORDER BY chapter_number ASC LIMIT 1");
+    $stmt_next = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number > ? AND status = 'approved' AND published_at <= NOW() ORDER BY chapter_number ASC LIMIT 1");
     $stmt_next->execute([$chapter['novel_id'], $chapter['chapter_number']]);
     $next_chapter = $stmt_next->fetch();
 
@@ -90,7 +87,7 @@ if (!$is_text_based) {
 
     <?php if ($is_preview_mode): ?>
         <div style="background-color: #ffa000; color: black; text-align: center; padding: 5px; font-weight: bold; position: sticky; top: 0; z-index: 10000;">
-            حالت پیش‌نمایش مدیر - <a href="approve_chapters.php" style="color: black;">بازگشت به پنل</a>
+            حالت پیش‌نمایش مدیر - <a href="admin/approve_chapters.php" style="color: black; text-decoration: underline;">بازگشت به پنل تایید</a>
         </div>
     <?php endif; ?>
 
@@ -108,6 +105,12 @@ if (!$is_text_based) {
     </header>
 
     <main id="reader-container" class="reader-container <?php echo $is_text_based ? '' : 'image-based-reader'; ?>">
+        <?php if (!empty($chapter['chapter_cover'])): ?>
+            <div class="chapter-cover-container">
+                <img src="<?php echo htmlspecialchars($chapter['chapter_cover']); ?>" alt="کاور چپتر <?php echo htmlspecialchars($chapter['title']); ?>">
+            </div>
+        <?php endif; ?>
+
         <?php if ($is_text_based): ?>
             <div id="reader-content" class="reader-content font-size-medium">
                 <?php echo $chapter['content']; ?>
