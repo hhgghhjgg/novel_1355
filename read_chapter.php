@@ -5,7 +5,8 @@
     Version: 2.3
 =====================================================
     - این نسخه نهایی و کامل، تمام قابلیت‌های صفحه خواندن، از جمله
-      پیش‌نمایش مدیر و نمایش محتوای چند نوعی را پیاده‌سازی می‌کند.
+      هدر سینمایی، پیش‌نمایش مدیر و نمایش محتوای چند نوعی را پیاده‌سازی می‌کند.
+    - اطلاعات عنوان و شماره چپتر در نوار بالایی حفظ شده است.
 */
 
 // --- گام ۱: فراخوانی فایل هسته برای اتصال و احراز هویت ---
@@ -22,6 +23,7 @@ if ($chapter_id <= 0) {
 $is_admin = false;
 if ($is_logged_in) {
     try {
+        // این کوئری باید سریع باشد چون user_id از قبل مشخص است
         $stmt_role = $conn->prepare("SELECT role FROM users WHERE id = ?");
         $stmt_role->execute([$user_id]);
         $user_role = $stmt_role->fetchColumn();
@@ -108,13 +110,16 @@ if (!$is_text_based) {
         </button>
     </header>
 
-    <main id="reader-container" class="reader-container <?php echo $is_text_based ? '' : 'image-based-reader'; ?>">
-        <?php if (!empty($chapter['chapter_cover'])): ?>
-            <div class="chapter-cover-container">
-                <img src="<?php echo htmlspecialchars($chapter['chapter_cover']); ?>" alt="کاور چپتر <?php echo htmlspecialchars($chapter['title']); ?>">
+    <?php if (!empty($chapter['chapter_cover'])): ?>
+        <section class="chapter-hero-section" style="background-image: url('<?php echo htmlspecialchars($chapter['chapter_cover']); ?>');">
+            <div class="chapter-hero-content">
+                <p class="chapter-hero-number">چپتر <?php echo htmlspecialchars($chapter['chapter_number']); ?></p>
+                <h1 class="chapter-hero-title"><?php echo htmlspecialchars($chapter['title']); ?></h1>
             </div>
-        <?php endif; ?>
+        </section>
+    <?php endif; ?>
 
+    <main id="reader-container" class="reader-container <?php echo $is_text_based ? '' : 'image-based-reader'; ?>">
         <?php if ($is_text_based): ?>
             <div id="reader-content" class="reader-content font-size-medium">
                 <?php echo $chapter['content']; ?>
