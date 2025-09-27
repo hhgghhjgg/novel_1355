@@ -1,14 +1,26 @@
-/* style.css */
+/* style.css (Final, Unabridged, Single Dark Theme) */
 
 /*
 =====================================================
-    NovelWorld - Main Stylesheet (Final, Unabridged)
-    Version: 2.3
+    NovelWorld - Main Stylesheet (Final Version)
+    Version: 2.4
 =====================================================
+    - این نسخه نهایی، تمام استایل‌های لازم برای UI جدید سایت
+      را در یک فایل واحد و با تم تاریک پیش‌فرض پیاده‌سازی می‌کند.
+    - نیازی به فایل themes.css یا قابلیت تغییر تم ندارد.
 */
 
-/* --- گام ۱: وارد کردن فایل تم و تعریف استایل‌های پایه --- */
-@import 'themes.css';
+/* --- گام ۱: تعریف رنگ‌ها و استایل‌های پایه --- */
+:root {
+    --bg-color: #13110B;
+    --surface-color: #1c1a14;
+    --primary-color: #FFC107;
+    --primary-hover-color: #FFD54F;
+    --text-color: #f0f0f0;
+    --text-secondary-color: #a0a0a0;
+    --border-color: #2f2c21;
+    --danger-color: #d32f2f;
+}
 
 * {
     box-sizing: border-box;
@@ -86,10 +98,26 @@ a:hover {
     overflow: hidden;
     transition: all 0.3s ease;
 }
-.hero-text .btn {
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 25px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--bg-color);
     margin-top: 20px;
 }
-
+.btn-primary:hover {
+    background-color: var(--primary-hover-color);
+}
 .hero-carousel {
     flex-basis: 50%;
     display: flex;
@@ -149,8 +177,6 @@ a:hover {
 .view-all:hover {
     color: var(--primary-color);
 }
-
-/* استایل مشترک برای تمام کاروسل‌ها */
 .manhwa-carousel, .genre-carousel, .latest-chapters-carousel {
     display: flex;
     gap: 15px;
@@ -159,7 +185,6 @@ a:hover {
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) var(--surface-color);
 }
-/* مخفی کردن اسکرول بار در مرورگرهای Webkit */
 .manhwa-carousel::-webkit-scrollbar, 
 .genre-carousel::-webkit-scrollbar, 
 .latest-chapters-carousel::-webkit-scrollbar {
@@ -169,6 +194,7 @@ a:hover {
 .genre-carousel::-webkit-scrollbar-track, 
 .latest-chapters-carousel::-webkit-scrollbar-track {
     background: var(--surface-color);
+    border-radius: 4px;
 }
 .manhwa-carousel::-webkit-scrollbar-thumb, 
 .genre-carousel::-webkit-scrollbar-thumb, 
@@ -179,12 +205,12 @@ a:hover {
 
 /* --- گام ۴: استایل کارت‌های ناول/مانهوا --- */
 .manhwa-card {
-    flex: 0 0 160px; /* عرض ثابت برای هر کارت */
+    flex: 0 0 160px;
     text-decoration: none;
 }
 .card-image-container {
     position: relative;
-    aspect-ratio: 2 / 3; /* نسبت تصویر استاندارد کاور */
+    aspect-ratio: 2 / 3;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
@@ -303,8 +329,8 @@ a:hover {
     .content-section { padding: 0 15px; }
     .hero-content { flex-direction: column; justify-content: flex-end; padding-bottom: 20px; text-align: center; }
     .hero-text { flex-basis: auto; }
-    .hero-carousel { display: none; } /* مخفی کردن کاروسل کوچک در موبایل برای سادگی */
+    .hero-carousel { display: none; }
     .hero-text h1 { font-size: 2.5rem; }
     .hero-text p { font-size: 1rem; }
     .manhwa-card { flex-basis: 140px; }
-}
+}```
