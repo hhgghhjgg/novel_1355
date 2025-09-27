@@ -207,6 +207,8 @@ a:hover {
 .manhwa-card {
     flex: 0 0 160px;
     text-decoration: none;
+    display: flex;
+    flex-direction: column;
 }
 .card-image-container {
     position: relative;
@@ -241,14 +243,15 @@ a:hover {
 }
 .card-content {
     margin-top: 10px;
+    flex-grow: 1;
 }
 .card-title {
     color: var(--text-color);
     font-size: 1rem;
     font-weight: 500;
-    white-space: nowrap;
+    height: 2.4em;
+    line-height: 1.2em;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 /* --- گام ۵: استایل کاروسل ژانرها (افقی) --- */
@@ -333,4 +336,4 @@ a:hover {
     .hero-text h1 { font-size: 2.5rem; }
     .hero-text p { font-size: 1rem; }
     .manhwa-card { flex-basis: 140px; }
-}```
+}
