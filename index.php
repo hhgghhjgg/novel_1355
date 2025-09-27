@@ -2,10 +2,10 @@
 /*
 =====================================================
     NovelWorld - Main Index Page
-    Version: 2.3 (Final, Cinematic UI, Horizontal Genre Carousel)
+    Version: 2.4 (Final, Unabridged, All Features)
 =====================================================
-    - این نسخه نهایی، شامل بازطراحی کامل صفحه اصلی با هیرو اسلایدر سینمایی،
-      اسلایدر آخرین چپترها، و اسلایدر افقی برای ژانرها است.
+    - این نسخه نهایی، شامل بازطراحی کامل صفحه اصلی با تمام
+      اسلایدرها و کاروسل‌های جدید است.
 */
 
 // --- گام ۱: فراخوانی هدر و اتصال به دیتابیس ---
@@ -53,6 +53,7 @@ $all_genres = [
     ['name' => 'هنرهای رزمی', 'icon' => 'sports_martial_arts'], ['name' => 'معمایی', 'icon' => 'search'],
     ['name' => 'ترسناک', 'icon' => 'mood_bad'], ['name' => 'مدرسه‌ای', 'icon' => 'school'],
 ];
+$top_genres = array_slice($all_genres, 0, 10);
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -101,7 +102,7 @@ $all_genres = [
             <a href="all_genres.php" class="view-all">همه ژانرها</a>
         </div>
         <div class="genre-carousel">
-            <?php foreach ($all_genres as $genre): ?>
+            <?php foreach ($top_genres as $genre): ?>
                 <a href="genre_results.php?genre=<?php echo urlencode($genre['name']); ?>" class="genre-card">
                     <span class="material-symbols-outlined genre-icon"><?php echo $genre['icon']; ?></span>
                     <span class="genre-name"><?php echo htmlspecialchars($genre['name']); ?></span>
@@ -117,9 +118,11 @@ $all_genres = [
             <h2 class="section-title"><span class="material-symbols-outlined">history</span>آخرین چپترهای منتشر شده</h2>
         </div>
         <div class="latest-chapters-carousel">
-            <?php foreach ($latest_chapters as $chapter): ?>
+            <?php foreach ($latest_chapters as $chapter): 
+                $optimized_cover = str_replace("/upload/", "/upload/c_fill,h_300,w_500,q_auto,f_auto/", $chapter['cover_url']);
+            ?>
                 <a href="read_chapter.php?id=<?php echo $chapter['id']; ?>" class="chapter-card">
-                    <img src="<?php echo htmlspecialchars($chapter['cover_url']); ?>" alt="<?php echo htmlspecialchars($chapter['novel_title']); ?>" class="chapter-card-img">
+                    <img src="<?php echo htmlspecialchars($optimized_cover); ?>" alt="<?php echo htmlspecialchars($chapter['novel_title']); ?>" class="chapter-card-img">
                     <div class="chapter-card-overlay">
                         <h4 class="chapter-card-novel-title"><?php echo htmlspecialchars($chapter['novel_title']); ?></h4>
                         <p class="chapter-card-title">چپتر <?php echo htmlspecialchars($chapter['chapter_number']); ?></p>
@@ -138,11 +141,13 @@ $all_genres = [
             <a href="search.php?origin=original" class="view-all">مشاهده همه</a>
         </div>
         <div class="manhwa-carousel">
-            <?php foreach ($newest_originals as $novel): ?>
+            <?php foreach ($newest_originals as $novel): 
+                $optimized_cover = str_replace("/upload/", "/upload/c_fill,h_480,w_320,q_auto,f_auto/", $novel['cover_url']);
+            ?>
                 <div class="manhwa-card">
                     <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
                         <div class="card-image-container">
-                            <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img">
+                            <img src="<?php echo htmlspecialchars($optimized_cover); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img">
                             <div class="card-badges"><span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span></div>
                         </div>
                         <div class="card-content"><h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3></div>
@@ -161,11 +166,13 @@ $all_genres = [
             <a href="search.php?origin=translated" class="view-all">مشاهده همه</a>
         </div>
         <div class="manhwa-carousel">
-            <?php foreach ($top_translated as $novel): ?>
+            <?php foreach ($top_translated as $novel): 
+                $optimized_cover = str_replace("/upload/", "/upload/c_fill,h_480,w_320,q_auto,f_auto/", $novel['cover_url']);
+            ?>
                 <div class="manhwa-card">
                     <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
                         <div class="card-image-container">
-                            <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img">
+                            <img src="<?php echo htmlspecialchars($optimized_cover); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img">
                             <div class="card-badges"><span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span></div>
                         </div>
                         <div class="card-content"><h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3></div>
@@ -177,8 +184,39 @@ $all_genres = [
     <?php endif; ?>
 </main>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- ماژول: مدیریت هیرو اسلایدر سینمایی ---
+    const heroCarousel = document.querySelector('.hero-carousel');
+    if (heroCarousel) {
+        const heroCards = heroCarousel.querySelectorAll('.hero-card');
+        const heroTitle = document.getElementById('hero-title');
+        const heroSummary = document.getElementById('hero-summary');
+        const heroLink = document.getElementById('hero-link');
+        const heroBackground = document.querySelector('.hero-background');
+
+        heroCards.forEach(card => {
+            card.addEventListener('click', () => {
+                if (card.classList.contains('active')) return;
+                
+                const currentActive = heroCarousel.querySelector('.hero-card.active');
+                if(currentActive) currentActive.classList.remove('active');
+                
+                card.classList.add('active');
+
+                // آپدیت متن و لینک و پس‌زمینه
+                if(heroTitle) heroTitle.textContent = card.dataset.title;
+                if(heroSummary) heroSummary.textContent = card.dataset.summary;
+                if(heroLink) heroLink.href = card.dataset.link;
+                if(heroBackground) heroBackground.style.backgroundImage = `url('${card.dataset.bg}')`;
+            });
+        });
+    }
+});
+</script>
+
 <?php 
 require_once 'footer.php'; 
 ?>
 </body>
-</html>
+</html>```
