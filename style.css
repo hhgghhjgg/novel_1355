@@ -1,237 +1,223 @@
+/* style.css */
+
 /*
 =====================================================
-    NovelWorld - Main Stylesheet (style.css)
-    Version: 2.2 (with Genre Slider)
+    NovelWorld - Main Stylesheet (Final, Unabridged)
+    Version: 2.3
 =====================================================
 */
 
-/* --- متغیرهای اصلی و استایل‌های عمومی --- */
-:root {
-    --bg-color: #13110B;
-    --surface-color: #1c1a14;
-    --primary-color: #FFC107;
-    --primary-hover-color: #FFD54F;
-    --text-color: #f0f0f0;
-    --text-secondary-color: #a0a0a0;
-    --border-color: #2f2c21;
-    --font-family: 'Vazirmatn', sans-serif;
-}
+/* --- گام ۱: وارد کردن فایل تم و تعریف استایل‌های پایه --- */
+@import 'themes.css';
 
-* { 
-    box-sizing: border-box; 
-    margin: 0; 
-    padding: 0; 
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
     background-color: var(--bg-color);
     color: var(--text-color);
-    font-family: var(--font-family);
-    overflow-x: hidden;
+    font-family: 'Vazirmatn', sans-serif;
+    margin: 0;
+    direction: rtl;
+    padding-top: 70px; /* فاصله برای هدر ثابت */
 }
 
 a {
-    text-decoration: none;
     color: var(--primary-color);
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
 }
 
-/* --- Hero Slider --- */
-.hero-slider {
+/* --- گام ۲: استایل‌های هیرو اسلایدر سینمایی --- */
+.cinematic-hero {
     position: relative;
+    height: 70vh;
+    min-height: 550px;
     width: 100%;
-    height: 85vh;
+    color: white;
     overflow: hidden;
+    margin-bottom: 40px;
 }
-
-.slider-container {
-    width: 100%;
-    height: 100%;
-}
-
-.slide {
+.hero-background {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: -10%; left: -10%;
+    width: 120%; height: 120%;
     background-size: cover;
     background-position: center;
+    filter: blur(15px) brightness(0.6);
+    transition: background-image 0.5s ease-in-out;
+}
+.hero-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(90deg, var(--bg-color) 20%, transparent 50%, var(--bg-color) 100%);
+}
+.hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    height: 100%;
     display: flex;
     align-items: center;
-    padding: 0 8%;
-    opacity: 0;
-    transition: opacity 1s ease-in-out;
-    z-index: 1;
+    gap: 50px;
+    padding: 0 30px;
 }
-
-.slide.active {
-    opacity: 1;
-    z-index: 2;
+.hero-text {
+    flex-basis: 50%;
 }
-
-.slide-content {
-    max-width: 550px;
-    color: white;
-}
-
-.slide-title {
-    font-size: 4rem;
+.hero-text h1 {
+    font-size: 3rem;
     font-weight: 800;
-    text-shadow: 2px 2px 15px rgba(0,0,0,0.8);
-    margin-bottom: 20px;
-    line-height: 1.2;
-}
-
-.slide-description {
-    font-size: 1rem;
-    font-weight: 400;
-    line-height: 1.7;
-    margin-bottom: 30px;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;  
-    overflow: hidden;
-}
-
-.btn-primary {
-    background-color: var(--primary-color);
-    color: var(--bg-color);
-    padding: 14px 30px;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 1rem;
-    text-decoration: none;
+    margin-bottom: 15px;
+    text-shadow: 1px 1px 10px rgba(0,0,0,0.5);
     transition: all 0.3s ease;
-    display: inline-block;
 }
-.btn-primary:hover {
-    background-color: var(--primary-hover-color);
-    transform: translateY(-3px);
-    box-shadow: 0 5px 20px rgba(255, 193, 7, 0.3);
+.hero-text p {
+    font-size: 1.1rem;
+    color: var(--text-secondary-color);
+    line-height: 1.7;
+    max-height: 100px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+.hero-text .btn {
+    margin-top: 20px;
 }
 
-.slider-dots {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
+.hero-carousel {
+    flex-basis: 50%;
     display: flex;
-    gap: 12px;
-    z-index: 5;
+    gap: 15px;
+    justify-content: center;
+    align-items: center;
 }
-
-.dot {
-    width: 12px;
-    height: 12px;
-    background-color: rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
+.hero-card {
+    width: 100px;
+    height: 150px;
+    border-radius: 8px;
+    overflow: hidden;
     cursor: pointer;
-    transition: all 0.4s ease;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    flex-shrink: 0;
+}
+.hero-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.hero-card.active {
+    transform: scale(1.15);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(255, 193, 7, 0.5);
 }
 
-.dot.active {
-    background-color: var(--primary-color);
-    transform: scale(1.3);
-}
-
-/* --- Content Sections & Carousels --- */
+/* --- گام ۳: استایل‌های عمومی بخش‌ها و کاروسل‌ها --- */
 .content-section {
-    padding: 50px 5%;
-}
-.content-section:last-child {
-    padding-bottom: 70px; /* برای جلوگیری از همپوشانی با فوتر موبایل */
+    max-width: 1200px;
+    margin: 0 auto 40px auto;
+    padding: 0 30px;
 }
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
 }
-
 .section-title {
-    font-size: 2rem;
-    font-weight: 700;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
 }
-
+.section-title .material-symbols-outlined {
+    vertical-align: middle;
+    margin-left: 10px;
+    color: var(--primary-color);
+    font-size: 1.8rem;
+}
 .view-all {
-    font-weight: 500;
     color: var(--text-secondary-color);
+    text-decoration: none;
+    font-weight: 500;
 }
 .view-all:hover {
     color: var(--primary-color);
 }
 
-.manhwa-carousel, .genre-carousel {
+/* استایل مشترک برای تمام کاروسل‌ها */
+.manhwa-carousel, .genre-carousel, .latest-chapters-carousel {
     display: flex;
     gap: 15px;
     overflow-x: auto;
-    padding-bottom: 20px;
+    padding-bottom: 15px;
     scrollbar-width: thin;
-    scrollbar-color: var(--primary-color) var(--surface-color);
+    scrollbar-color: var(--border-color) var(--surface-color);
 }
-.manhwa-carousel::-webkit-scrollbar, .genre-carousel::-webkit-scrollbar { height: 8px; }
-.manhwa-carousel::-webkit-scrollbar-track, .genre-carousel::-webkit-scrollbar-track { background: var(--surface-color); border-radius: 10px; }
-.manhwa-carousel::-webkit-scrollbar-thumb, .genre-carousel::-webkit-scrollbar-thumb { background-color: var(--primary-color); border-radius: 10px; }
+/* مخفی کردن اسکرول بار در مرورگرهای Webkit */
+.manhwa-carousel::-webkit-scrollbar, 
+.genre-carousel::-webkit-scrollbar, 
+.latest-chapters-carousel::-webkit-scrollbar {
+    height: 8px;
+}
+.manhwa-carousel::-webkit-scrollbar-track, 
+.genre-carousel::-webkit-scrollbar-track, 
+.latest-chapters-carousel::-webkit-scrollbar-track {
+    background: var(--surface-color);
+}
+.manhwa-carousel::-webkit-scrollbar-thumb, 
+.genre-carousel::-webkit-scrollbar-thumb, 
+.latest-chapters-carousel::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
 
-/* --- Card UI --- */
+/* --- گام ۴: استایل کارت‌های ناول/مانهوا --- */
 .manhwa-card {
-    flex: 0 0 200px;
-    background-color: var(--surface-color);
-    border-radius: 12px;
-    overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border: 1px solid var(--border-color);
-}
-
-.manhwa-card:hover {
-    transform: translateY(-12px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.5);
-    border-color: var(--primary-color);
-}
-
-.manhwa-card a {
+    flex: 0 0 160px; /* عرض ثابت برای هر کارت */
     text-decoration: none;
-    color: var(--text-color);
 }
-
-.card-image-container { 
-    position: relative; 
+.card-image-container {
+    position: relative;
+    aspect-ratio: 2 / 3; /* نسبت تصویر استاندارد کاور */
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
-.card-img { 
-    width: 100%; 
-    height: 280px; 
-    object-fit: cover; 
+.card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
 }
-
+.manhwa-card:hover .card-img {
+    transform: scale(1.1);
+}
 .card-badges {
     position: absolute;
-    top: 10px;
-    left: 10px;
-    right: 10px;
-    display: flex;
-    justify-content: flex-end; /* فقط امتیاز را نشان می‌دهیم */
+    top: 8px;
+    right: 8px;
 }
-
 .badge {
-    padding: 5px 10px;
-    border-radius: 20px;
+    padding: 3px 8px;
+    border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 700;
-    backdrop-filter: blur(5px);
 }
-
 .rating-badge {
-    background-color: rgba(255, 193, 7, 0.8);
-    color: var(--bg-color);
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    background-color: rgba(0,0,0,0.7);
+    color: var(--primary-color);
 }
-
-.card-content { 
-    padding: 15px; 
+.card-content {
+    margin-top: 10px;
 }
 .card-title {
+    color: var(--text-color);
     font-size: 1rem;
     font-weight: 500;
     white-space: nowrap;
@@ -239,96 +225,86 @@ a {
     text-overflow: ellipsis;
 }
 
-
-/* --- استایل اسلایدر ژانر --- */
+/* --- گام ۵: استایل کاروسل ژانرها (افقی) --- */
 .genre-card {
-    flex: 0 0 180px;
-    height: 100px;
+    flex: 0 0 140px;
+    background: var(--surface-color);
+    padding: 20px;
     border-radius: 12px;
+    text-align: center;
+    text-decoration: none;
+    color: var(--text-color);
+    transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    text-decoration: none;
-    color: white;
-    padding: 15px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .genre-card:hover {
-    transform: scale(1.05);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    transform: translateY(-5px);
+    background: var(--border-color);
 }
-.genre-icon svg {
-    width: 40px;
-    height: 40px;
+.genre-card .genre-icon {
+    font-size: 38px;
+    color: var(--primary-color);
 }
-.genre-name {
-    font-size: 1.1rem;
+.genre-card .genre-name {
+    display: block;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* --- گام ۶: استایل کاروسل آخرین چپترها --- */
+.chapter-card {
+    position: relative;
+    flex: 0 0 250px;
+    height: 150px;
+    border-radius: 8px;
+    overflow: hidden;
+    display: block;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.chapter-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+.chapter-card:hover .chapter-card-img {
+    transform: scale(1.1);
+}
+.chapter-card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 15px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.9));
+    color: white;
+}
+.chapter-card-novel-title {
+    margin: 0;
+    font-size: 1rem;
     font-weight: 700;
-    margin-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.chapter-card-title {
+    margin: 5px 0 0;
+    font-size: 0.9rem;
+    color: var(--primary-color);
 }
 
-
-/*
-=====================================================
-============== طراحی واکنش‌گرا (موبایل) ==============
-=====================================================
-*/
-@media (max-width: 800px) {
-
-    .content-section {
-        padding: 40px 5%;
-    }
-
-    /* --- Hero Slider --- */
-    .hero-slider {
-        height: 55vh;
-    }
-    .slide {
-        flex-direction: column; 
-        justify-content: center;
-        align-items: flex-start;
-        text-align: right;
-        padding: 0 8% 0 0;
-    }
-    .slide-content {
-        max-width: 75%;
-    }
-    .slide-title {
-        font-size: 2.2rem;
-    }
-    .slide-description {
-        -webkit-line-clamp: 2;
-    }
-    .slider-dots {
-        bottom: 20px;
-        left: auto;
-        right: 8%;
-        transform: none;
-    }
-    
-    /* --- عمومی --- */
-    .section-title {
-        font-size: 1.5rem;
-    }
-    .manhwa-card {
-        flex: 0 0 150px;
-    }
-    .card-img {
-        height: 210px;
-    }
-    .card-title {
-        font-size: 0.9rem;
-    }
-    .genre-card {
-        flex: 0 0 150px;
-        height: 90px;
-    }
-    .genre-icon svg {
-        width: 30px;
-        height: 30px;
-    }
-    .genre-name {
-        font-size: 1rem;
-    }
+/* --- گام ۷: واکنش‌گرایی --- */
+@media (max-width: 768px) {
+    body { padding-top: 60px; }
+    .content-section { padding: 0 15px; }
+    .hero-content { flex-direction: column; justify-content: flex-end; padding-bottom: 20px; text-align: center; }
+    .hero-text { flex-basis: auto; }
+    .hero-carousel { display: none; } /* مخفی کردن کاروسل کوچک در موبایل برای سادگی */
+    .hero-text h1 { font-size: 2.5rem; }
+    .hero-text p { font-size: 1rem; }
+    .manhwa-card { flex-basis: 140px; }
 }
