@@ -3,18 +3,17 @@
 
 /*
 =====================================================
-    NovelWorld - Save Chapter Script (Advanced)
-    Version: 2.1
+    NovelWorld - Save Chapter Script (Cron-Ready)
+    Version: 2.2
 =====================================================
-    - این اسکریپت داده‌های فرم پیشرفته manage_chapter.php را پردازش می‌کند.
-    - شامل منطق پردازش کاور چپتر و زمان‌بندی انتشار است.
-    - همچنان بین محتوای متنی و تصویری (ZIP) تمایز قائل می‌شود.
+    - این نسخه برای کار با سیستم زمان‌بندی Cron Job بهینه شده است.
+    - نوتیفیکیشن تلگرام از این فایل حذف و به cron_processor.php منتقل شده است.
+    - وضعیت هر چپتر جدید یا ویرایش شده به 'pending' تغییر می‌کند تا توسط مدیر بررسی شود.
 */
 
 // --- گام ۱: فراخوانی فایل‌های مورد نیاز ---
 require_once 'header.php'; // شامل امنیت، اتصال دیتابیس و اطلاعات کاربر
 require_once __DIR__ . '/../vendor/autoload.php';
-require_once __DIR__ . '/../telegram_notifier.php';
 
 use Cloudinary\Cloudinary;
 
@@ -33,11 +32,9 @@ $chapter_number = isset($_POST['chapter_number']) ? intval($_POST['chapter_numbe
 $title = isset($_POST['title']) ? trim($_POST['title']) : '';
 $is_editing = $chapter_id > 0;
 
-// دریافت اطلاعات جدید
 $published_at = trim($_POST['published_at']);
 $current_cover_url = $_POST['current_cover_url'] ?? null;
-$chapter_cover_url = $current_cover_url; // مقدار پیش‌فرض
-
+$chapter_cover_url = $current_cover_url;
 $content_for_db = '';
 
 if ($novel_id === 0 || $chapter_number === 0 || empty($title)) {
@@ -47,27 +44,21 @@ if ($novel_id === 0 || $chapter_number === 0 || empty($title)) {
 // --- گام ۴: منطق پردازش ---
 try {
     // ۴.۱: بررسی مالکیت اثر
-    $stmt_check = $conn->prepare("SELECT title, cover_url, author FROM novels WHERE id = ? AND author_id = ?");
+    $stmt_check = $conn->prepare("SELECT id FROM novels WHERE id = ? AND author_id = ?");
     $stmt_check->execute([$novel_id, $user_id]);
-    $novel_info = $stmt_check->fetch();
-    if (!$novel_info) die("خطای امنیتی: شما مجوز دسترسی به این اثر را ندارید.");
+    if (!$stmt_check->fetch()) die("خطای امنیتی: شما مجوز دسترسی به این اثر را ندارید.");
 
-    // ۴.۲: پردازش کاور چپتر (اگر فایل جدیدی آپلود شده باشد)
+    // ۴.۲: پردازش کاور چپتر
     if (isset($_FILES['chapter_cover']) && $_FILES['chapter_cover']['error'] === UPLOAD_ERR_OK) {
-        try {
-            $cloudinary = new Cloudinary(getenv('CLOUDINARY_URL'));
-            $uploadResult = $cloudinary->uploadApi()->upload($_FILES['chapter_cover']['tmp_name'], [
-                'folder' => "chapter_covers/{$novel_id}"
-            ]);
-            $chapter_cover_url = $uploadResult['secure_url'];
-        } catch (Exception $e) { die("خطا در آپلود کاور چپتر: " . $e->getMessage()); }
+        $cloudinary = new Cloudinary(getenv('CLOUDINARY_URL'));
+        $uploadResult = $cloudinary->uploadApi()->upload($_FILES['chapter_cover']['tmp_name'], ['folder' => "chapter_covers/{$novel_id}"]);
+        $chapter_cover_url = $uploadResult['secure_url'];
     }
 
     // ۴.۳: پردازش تاریخ انتشار
-    // اگر کاربر تاریخی وارد نکرده، از زمان حال برای انتشار فوری استفاده می‌کنیم
     $publish_date_for_db = !empty($published_at) ? $published_at : date('Y-m-d H:i:s');
 
-    // ۴.۴: پردازش محتوای چپتر بر اساس نوع اثر
+    // ۴.۴: پردازش محتوای چپتر
     if ($novel_type === 'novel') {
         $content_for_db = isset($_POST['content_text']) ? $_POST['content_text'] : '';
         if (empty($content_for_db) && !$is_editing) die("محتوای چپتر نمی‌تواند خالی باشد.");
@@ -97,9 +88,9 @@ try {
             if (empty($image_files)) die("هیچ فایل تصویر معتبری در فایل ZIP یافت نشد.");
 
             $cloudinary_urls = [];
-            $cloudinary = new Cloudinary(getenv('CLOUDINARY_URL'));
+            $cloudinary_client = new Cloudinary(getenv('CLOUDINARY_URL'));
             foreach ($image_files as $image_path) {
-                $uploadResult = $cloudinary->uploadApi()->upload($image_path, ['folder' => "chapters/{$novel_id}/{$chapter_number}"]);
+                $uploadResult = $cloudinary_client->uploadApi()->upload($image_path, ['folder' => "chapters/{$novel_id}/{$chapter_number}"]);
                 $cloudinary_urls[] = $uploadResult['secure_url'];
             }
             $content_for_db = json_encode($cloudinary_urls);
@@ -115,8 +106,8 @@ try {
     // --- گام ۵: ذخیره در دیتابیس ---
     if ($is_editing) {
         // --- حالت ویرایش ---
-        // ما فقط فیلدهایی را آپدیت می‌کنیم که داده جدیدی برایشان وجود دارد
-        $update_parts = ["chapter_number = ?", "title = ?", "cover_url = ?", "published_at = ?", "updated_at = NOW()"];
+        // وضعیت چپتر به 'pending' بازنشانی می‌شود تا مدیر دوباره آن را بررسی کند.
+        $update_parts = ["chapter_number = ?", "title = ?", "cover_url = ?", "published_at = ?", "status = 'pending'", "updated_at = NOW()"];
         $params = [$chapter_number, $title, $chapter_cover_url, $publish_date_for_db];
         
         if (!empty($content_for_db)) {
@@ -132,17 +123,15 @@ try {
         $stmt->execute($params);
     } else {
         // --- حالت ایجاد ---
-        // توجه: وضعیت چپتر جدید به صورت پیش‌فرض 'pending' خواهد بود (طبق تعریف دیتابیس)
+        // وضعیت چپتر جدید به صورت پیش‌فرض 'pending' خواهد بود.
         $sql = "INSERT INTO chapters (novel_id, chapter_number, title, content, cover_url, published_at) VALUES (?, ?, ?, ?, ?, ?)";
         $stmt = $conn->prepare($sql);
         $stmt->execute([$novel_id, $chapter_number, $title, $content_for_db, $chapter_cover_url, $publish_date_for_db]);
-        
-        // نوتیفیکیشن تلگرام فقط برای چپترهای جدید (این بخش نیازی به تغییر ندارد)
-        // ... (منطق ارسال نوتیفیکیشن تلگرام می‌تواند اینجا باشد، اما بهتر است پس از تایید مدیر ارسال شود)
     }
     
     // --- گام ۶: هدایت به صفحه جزئیات ناول ---
-    header("Location: ../novel_detail.php?id=" . $novel_id . "&status=chapter_saved#chapters");
+    // پیام موفقیت به نویسنده اطلاع می‌دهد که چپتر برای بررسی ارسال شده است.
+    header("Location: ../novel_detail.php?id=" . $novel_id . "&status=chapter_submitted#chapters");
     exit();
 
 } catch (Exception $e) {
