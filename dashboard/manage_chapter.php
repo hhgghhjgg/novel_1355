@@ -12,7 +12,7 @@
     - قابلیت زمان‌بندی انتشار چپتر در آینده اضافه شده است.
 */
 
-require_once 'header.php';
+require_once 'core.php';
 
 // --- گام ۱: دریافت ID ها و آماده‌سازی متغیرها ---
 $novel_id = isset($_GET['novel_id']) ? intval($_GET['novel_id']) : 0;
