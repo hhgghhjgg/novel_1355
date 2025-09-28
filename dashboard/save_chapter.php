@@ -12,7 +12,7 @@
 */
 
 // --- گام ۱: فراخوانی فایل‌های مورد نیاز ---
-require_once 'header.php'; // شامل امنیت، اتصال دیتابیس و اطلاعات کاربر
+require_once 'core.php'; // شامل امنیت، اتصال دیتابیس و اطلاعات کاربر
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Cloudinary\Cloudinary;
