@@ -1,12 +1,9 @@
 <?php
 /*
 =====================================================
-    NovelWorld - Chapter Reader Page (Final, Unabridged)
-    Version: 2.3
+    NovelWorld - Chapter Reader Page (Final, Unabridged, with Paywall)
+    Version: 2.4
 =====================================================
-    - این نسخه نهایی و کامل، تمام قابلیت‌های صفحه خواندن، از جمله
-      هدر سینمایی، پیش‌نمایش مدیر و نمایش محتوای چند نوعی را پیاده‌سازی می‌کند.
-    - اطلاعات عنوان و شماره چپتر در نوار بالایی حفظ شده است.
 */
 
 // --- گام ۱: فراخوانی فایل هسته برای اتصال و احراز هویت ---
@@ -19,46 +16,40 @@ if ($chapter_id <= 0) {
     die("خطا: شناسه چپتر نامعتبر است.");
 }
 
-// بررسی می‌کنیم که آیا کاربر ادمین است.
 $is_admin = false;
 if ($is_logged_in) {
     try {
-        // این کوئری باید سریع باشد چون user_id از قبل مشخص است
         $stmt_role = $conn->prepare("SELECT role FROM users WHERE id = ?");
         $stmt_role->execute([$user_id]);
         $user_role = $stmt_role->fetchColumn();
         if ($user_role === 'admin') {
             $is_admin = true;
         }
-    } catch (PDOException $e) { /* خطا در بررسی نقش، کاربر ادمین در نظر گرفته نمی‌شود */ }
+    } catch (PDOException $e) { /* خطا در بررسی نقش */ }
 }
 $is_preview_mode = (isset($_GET['preview']) && $_GET['preview'] === 'true' && $is_admin);
 
-// --- گام ۳: واکشی اطلاعات چپتر با کوئری شرطی ---
+// --- گام ۳: واکشی اطلاعات چپتر و ناول ---
 try {
-    $base_sql = "SELECT c.id, c.novel_id, c.chapter_number, c.title, c.content, c.cover_url as chapter_cover, 
-                        n.title as novel_title, n.type as novel_type
-                 FROM chapters c 
-                 JOIN novels n ON c.novel_id = n.id 
-                 WHERE c.id = ?";
-    
-    // اگر حالت پیش‌نمایش برای ادمین فعال نباشد، شرط وضعیت و تاریخ انتشار را اضافه می‌کنیم
-    $sql = $is_preview_mode ? $base_sql : $base_sql . " AND c.status = 'approved' AND c.published_at <= NOW()";
-    
-    $stmt = $conn->prepare($sql);
+    // واکشی اطلاعات چپتر به همراه نوع و عنوان ناول والد
+    $stmt = $conn->prepare(
+        "SELECT c.*, n.title as novel_title, n.type as novel_type, n.origin as novel_origin
+         FROM chapters c 
+         JOIN novels n ON c.novel_id = n.id 
+         WHERE c.id = ?"
+    );
     $stmt->execute([$chapter_id]);
     $chapter = $stmt->fetch();
 
     if (!$chapter) {
         header('HTTP/1.0 404 Not Found');
-        die("چپتر مورد نظر یافت نشد، هنوز منتشر نشده یا در انتظار تایید است.");
+        die("چپتر مورد نظر یافت نشد.");
     }
 
-    // واکشی چپتر قبلی و بعدی (فقط چپترهای منتشر شده برای همه کاربران)
+    // واکشی چپتر قبلی و بعدی
     $stmt_prev = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number < ? AND status = 'approved' AND published_at <= NOW() ORDER BY chapter_number DESC LIMIT 1");
     $stmt_prev->execute([$chapter['novel_id'], $chapter['chapter_number']]);
     $prev_chapter = $stmt_prev->fetch();
-
     $stmt_next = $conn->prepare("SELECT id FROM chapters WHERE novel_id = ? AND chapter_number > ? AND status = 'approved' AND published_at <= NOW() ORDER BY chapter_number ASC LIMIT 1");
     $stmt_next->execute([$chapter['novel_id'], $chapter['chapter_number']]);
     $next_chapter = $stmt_next->fetch();
@@ -66,12 +57,41 @@ try {
 } catch (PDOException $e) {
     error_log("Reader Page DB Error: " . $e->getMessage());
     header('HTTP/1.0 500 Internal Server Error');
-    die("خطای دیتابیس. لطفاً بعداً تلاش کنید.");
+    die("خطای دیتابیس.");
+}
+
+// --- گام ۴: منطق بررسی دسترسی (Access Logic) ---
+$has_access = false;
+$is_locked = ($chapter['mana_price'] !== null && $chapter['mana_price'] > 0);
+
+// چه کسانی دسترسی دارند؟
+// ۱. ادمین‌ها همیشه دسترسی دارند.
+// ۲. نویسنده اثر همیشه به اثر خودش دسترسی دارد.
+// ۳. اگر چپتر قفل نباشد، همه دسترسی دارند.
+$author_id_of_work = $conn->query("SELECT author_id FROM novels WHERE id = {$chapter['novel_id']}")->fetchColumn();
+if ($is_admin || ($is_logged_in && $user_id == $author_id_of_work) || !$is_locked) {
+    $has_access = true;
+}
+
+// ۴. اگر کاربر عادی است و چپتر قفل است، بررسی می‌کنیم که آیا آن را خریده است یا نه.
+if (!$has_access && $is_logged_in) {
+    $stmt_check_purchase = $conn->prepare("SELECT id FROM purchased_chapters WHERE user_id = ? AND chapter_id = ?");
+    $stmt_check_purchase->execute([$user_id, $chapter_id]);
+    if ($stmt_check_purchase->fetch()) {
+        $has_access = true;
+    }
+}
+
+// ۵. بررسی نهایی وضعیت و تاریخ انتشار (برای کاربران غیر ادمین)
+if (!$is_preview_mode && ($chapter['status'] !== 'approved' || strtotime($chapter['published_at']) > time())) {
+    if (!$is_admin && !($is_logged_in && $user_id == $author_id_of_work)) {
+        die("این چپتر هنوز منتشر نشده یا در انتظار تایید است.");
+    }
 }
 
 $is_text_based = ($chapter['novel_type'] === 'novel');
 $image_urls = [];
-if (!$is_text_based) {
+if (!$is_text_based && $has_access) { // فقط در صورت دسترسی، URL ها را پردازش کن
     $decoded_content = json_decode($chapter['content'], true);
     if (is_array($decoded_content)) {
         $image_urls = $decoded_content;
@@ -88,6 +108,7 @@ if (!$is_text_based) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&family=Lalezar&family=Amiri:wght@400;700&family=Markazi+Text:wght@400;500;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
 </head>
 <body class="theme-dark font-vazirmatn" data-chapter-id="<?php echo $chapter['id']; ?>">
 
@@ -110,7 +131,7 @@ if (!$is_text_based) {
         </button>
     </header>
 
-    <?php if (!empty($chapter['chapter_cover'])): ?>
+    <?php if ($has_access && !empty($chapter['chapter_cover'])): ?>
         <section class="chapter-hero-section" style="background-image: url('<?php echo htmlspecialchars($chapter['chapter_cover']); ?>');">
             <div class="chapter-hero-content">
                 <p class="chapter-hero-number">چپتر <?php echo htmlspecialchars($chapter['chapter_number']); ?></p>
@@ -120,19 +141,45 @@ if (!$is_text_based) {
     <?php endif; ?>
 
     <main id="reader-container" class="reader-container <?php echo $is_text_based ? '' : 'image-based-reader'; ?>">
-        <?php if ($is_text_based): ?>
-            <div id="reader-content" class="reader-content font-size-medium">
-                <?php echo $chapter['content']; ?>
-            </div>
+        <?php if ($has_access): ?>
+            <?php if ($is_text_based): ?>
+                <div id="reader-content" class="reader-content font-size-medium">
+                    <?php echo $chapter['content']; ?>
+                </div>
+            <?php else: ?>
+                <div id="image-reader-content" class="image-reader-content">
+                    <?php if (empty($image_urls)): ?>
+                        <p style="color: var(--reader-meta); text-align: center;">هیچ تصویری برای این چپتر یافت نشد.</p>
+                    <?php else: ?>
+                        <?php foreach ($image_urls as $url): ?>
+                            <img data-src="<?php echo htmlspecialchars($url); ?>" alt="صفحه چپتر" class="lazy-load">
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         <?php else: ?>
-            <div id="image-reader-content" class="image-reader-content">
-                <?php if (empty($image_urls)): ?>
-                    <p style="color: var(--reader-meta); text-align: center;">هیچ تصویری برای این چپتر یافت نشد.</p>
+            <div class="paywall">
+                <span class="material-symbols-outlined paywall-icon">lock</span>
+                <h2>این چپتر قفل است</h2>
+                <p>برای دسترسی فوری به این چپتر، شما به <b><?php echo htmlspecialchars($chapter['mana_price']); ?> مانا</b> نیاز دارید.</p>
+                <?php if ($is_logged_in): 
+                    $user_mana_balance = $conn->query("SELECT mana_balance FROM users WHERE id = $user_id")->fetchColumn();
+                ?>
+                    <p>موجودی فعلی شما: <b><?php echo htmlspecialchars($user_mana_balance); ?> مانا</b></p>
+                    <?php if ($user_mana_balance >= $chapter['mana_price']): ?>
+                        <button id="purchase-btn" data-chapter-id="<?php echo $chapter['id']; ?>" class="btn btn-primary">
+                            خرید با <?php echo htmlspecialchars($chapter['mana_price']); ?> مانا و خواندن
+                        </button>
+                    <?php else: ?>
+                        <p style="color: var(--danger-color);">موجودی مانای شما کافی نیست.</p>
+                        <a href="mana_shop.php" class="btn btn-secondary">کسب مانای بیشتر</a>
+                    <?php endif; ?>
                 <?php else: ?>
-                    <?php foreach ($image_urls as $url): ?>
-                        <img data-src="<?php echo htmlspecialchars($url); ?>" alt="صفحه چپتر" class="lazy-load">
-                    <?php endforeach; ?>
+                    <a href="login.php?redirect_url=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>" class="btn btn-primary">
+                        برای خرید ابتدا وارد شوید
+                    </a>
                 <?php endif; ?>
+                <p class="unlock-info">این چپتر پس از مدتی به صورت خودکار رایگان خواهد شد.</p>
             </div>
         <?php endif; ?>
     </main>
@@ -199,6 +246,7 @@ if (!$is_text_based) {
         const CURRENT_USER_ID = <?php echo json_encode($user_id); ?>;
         const CURRENT_USERNAME = <?php echo json_encode($username); ?>;
         const IS_ADMIN = <?php echo json_encode($is_admin); ?>;
+        const NOVEL_ORIGIN = <?php echo json_encode($chapter['novel_origin']); ?>;
     </script>
     <script src="reader-script.js"></script>
 </body>
