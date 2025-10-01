@@ -1,24 +1,17 @@
 <?php
-// profile.php
-
 /*
 =====================================================
-    NovelWorld - User Profile Page
-    Version: 2.2 (Final - With Library Link)
+    NovelWorld - User Profile Page (Final, Unabridged)
+    Version: 2.3 (with Mana Balance)
 =====================================================
-    - این صفحه پروفایل کاربری را نمایش می‌دهد و به عنوان یک داشبورد مرکزی
-      برای دسترسی به بخش‌های مختلف حساب کاربری عمل می‌کند.
-    - این صفحه یک مسیر محافظت شده است و فقط کاربران لاگین کرده به آن دسترسی دارند.
-    - شامل لینک به کتابخانه شخصی، پنل نویسندگی و ویرایش پروفایل است.
+    - این نسخه نهایی، تمام قابلیت‌های صفحه پروفایل، از جمله
+      نمایش موجودی مانا و لینک‌های دسترسی سریع را پیاده‌سازی می‌کند.
 */
 
 // --- گام ۱: فراخوانی هدر و بررسی احراز هویت ---
-
-// هدر اصلی سایت شامل اتصال دیتابیس، اطلاعات کاربر و ظاهر کلی صفحه است.
 require_once 'header.php';
 
 // اگر کاربر لاگین نکرده بود، اجازه دسترسی به این صفحه را نمی‌دهیم.
-// این تابع header() باید قبل از هر خروجی HTML اجرا شود.
 if (!$is_logged_in) {
     header("Location: login.php");
     exit();
@@ -26,16 +19,14 @@ if (!$is_logged_in) {
 
 
 // --- گام ۲: واکشی اطلاعات تکمیلی کاربر ---
-
 try {
-    // ما نام کاربری و ID را از کوکی داریم، اما به تاریخ عضویت هم نیاز داریم.
-    $stmt = $conn->prepare("SELECT created_at FROM users WHERE id = ?");
+    // ما تمام اطلاعات لازم (تاریخ عضویت و موجودی مانا) را در یک کوئری واکشی می‌کنیم.
+    $stmt = $conn->prepare("SELECT created_at, mana_balance FROM users WHERE id = ?");
     $stmt->execute([$user_id]); // $user_id از header.php می‌آید
     $user_data = $stmt->fetch();
 
-    // اگر به هر دلیلی کاربری با آن ID یافت نشد (مثلا از دیتابیس حذف شده)،
-    // برای امنیت، او را از سیستم خارج می‌کنیم.
     if (!$user_data) {
+        // اگر به هر دلیلی کاربری با آن ID یافت نشد، او را از سیستم خارج می‌کنیم.
         header("Location: logout.php");
         exit();
     }
@@ -48,8 +39,16 @@ try {
 
 // --- گام ۳: رندر کردن بخش HTML ---
 ?>
-<title>پروفایل <?php echo $username; // $username از header.php می‌آید ?> - NovelWorld</title>
-<link rel="stylesheet" href="profile-style.css">
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پروفایل <?php echo $username; ?> - NovelWorld</title>
+    <link rel="stylesheet" href="profile-style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
+</head>
+<body>
 
 <div class="profile-page">
     <div class="profile-card">
@@ -66,9 +65,17 @@ try {
             </div>
         </header>
 
+        <!-- بخش جدید نمایش مانا -->
+        <div class="mana-balance-box">
+            <span class="material-symbols-outlined mana-icon">diamond</span>
+            <div class="mana-text">
+                <span>موجودی مانا</span>
+                <strong><?php echo htmlspecialchars($user_data['mana_balance']); ?></strong>
+            </div>
+            <a href="transactions.php" class="history-link">تاریخچه</a>
+        </div>
+
         <nav class="profile-actions-list">
-            
-            <!-- لینک جدید به کتابخانه شخصی -->
             <a href="library.php" class="action-link">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                 <span>کتابخانه من</span>
@@ -96,3 +103,5 @@ try {
 // فراخوانی فوتر مشترک سایت
 require_once 'footer.php'; 
 ?>
+</body>
+</html>
