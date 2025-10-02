@@ -1,0 +1,203 @@
+/* story_viewer_style.css */
+
+/*
+=====================================================
+    NovelWorld - Story Viewer Stylesheet
+    Version: 1.0 (Final, Unabridged)
+=====================================================
+    - این فایل ظاهر تمام‌صفحه و اینستاگرام-مانند نمایشگر
+      "استوری ناول" را طراحی می‌کند.
+*/
+
+/* --- گام ۱: استایل‌های پایه و کانتینر اصلی --- */
+body {
+    margin: 0;
+    overflow: hidden; /* جلوگیری از اسکرول صفحه */
+    background-color: #000;
+    font-family: 'Vazirmatn', sans-serif;
+    direction: rtl;
+}
+
+.story-viewer-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* --- گام ۲: نوارهای پیشرفت (Progress Bars) --- */
+.progress-bars {
+    position: absolute;
+    top: 15px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    gap: 4px;
+    z-index: 10;
+}
+
+.progress-bar-container {
+    flex-grow: 1;
+    height: 3px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #ffffff;
+}
+
+/* --- گام ۳: هدر استوری (اطلاعات کاربر) --- */
+.story-header {
+    position: absolute;
+    top: 30px;
+    left: 15px;
+    right: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+    color: white;
+}
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: white;
+}
+.user-info img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+}
+.user-info span {
+    font-weight: 700;
+    text-shadow: 1px 1px 5px rgba(0,0,0,0.5);
+}
+.close-btn {
+    font-size: 2.5rem;
+    color: white;
+    text-decoration: none;
+    text-shadow: 1px 1px 5px rgba(0,0,0,0.5);
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+.close-btn:hover {
+    opacity: 1;
+}
+
+/* --- گام ۴: محتوای اصلی استوری --- */
+.story-content {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+.story-background {
+    position: absolute;
+    top: -10%; left: -10%;
+    width: 120%; height: 120%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(15px) brightness(0.5);
+}
+.story-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 10%, transparent 50%, rgba(0,0,0,0.4) 100%);
+}
+.story-details {
+    position: absolute;
+    bottom: 80px; /* فاصله از پایین */
+    left: 0;
+    right: 0;
+    padding: 20px;
+    z-index: 5;
+    text-align: center;
+    color: white;
+}
+.story-title {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin: 0 0 10px;
+}
+.novel-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin: 0 0 25px;
+    text-shadow: 2px 2px 10px rgba(0,0,0,0.7);
+}
+.view-novel-btn {
+    display: inline-block;
+    background-color: #FFC107; /* رنگ اصلی سایت */
+    color: #13110B;
+    padding: 12px 30px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.1rem;
+    transition: transform 0.2s;
+}
+.view-novel-btn:hover {
+    transform: scale(1.05);
+}
+
+/* --- گام ۵: فوتر استوری (تعداد بازدید) --- */
+.story-footer {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    z-index: 10;
+}
+.view-count {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(0,0,0,0.4);
+    padding: 5px 10px;
+    border-radius: 20px;
+    color: white;
+    font-size: 0.9rem;
+}
+.view-count .material-symbols-outlined {
+    font-size: 1.2rem;
+}
+
+/* --- گام ۶: بخش‌های کلیک برای ناوبری --- */
+.nav-tap {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 30%;
+    z-index: 20;
+    cursor: pointer;
+}
+.nav-tap.left {
+    left: 0;
+}
+.nav-tap.right {
+    right: 0;
+}
+
+/* --- گام ۷: واکنش‌گرایی --- */
+@media (min-width: 500px) {
+    .story-viewer-container {
+        width: 450px; /* حداکثر عرض در دسکتاپ */
+        height: 95vh;
+        max-height: 800px;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+}
