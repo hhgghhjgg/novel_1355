@@ -2,17 +2,15 @@
 
 /*
 =====================================================
-    NovelWorld - Public Profile Page Stylesheet
-    Version: 1.0 (Final, Unabridged)
+    NovelWorld - Public Profile Page Stylesheet (Final, Unabridged)
+    Version: 1.1
 =====================================================
-    - این فایل ظاهر صفحه پروفایل عمومی کاربران را با استایل
-      اینستاگرام-مانند طراحی می‌کند.
 */
 
 /* --- گام ۱: استایل کانتینر اصلی --- */
 .profile-page-container {
     max-width: 960px;
-    margin: 20px auto;
+    margin: 20px auto 50px auto;
     padding: 0 15px;
 }
 
@@ -23,19 +21,20 @@
     overflow: hidden;
     margin-bottom: 30px;
     border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 .header-banner {
-    height: 200px;
+    height: 220px;
     background-size: cover;
     background-position: center;
-    background-color: var(--border-color); /* رنگ پیش‌فرض اگر عکسی نباشد */
+    background-color: var(--border-color);
 }
 .header-content {
     display: flex;
     align-items: flex-end;
     padding: 0 30px 20px;
     position: relative;
-    margin-top: -80px; /* برای اینکه عکس پروفایل روی بنر بیاید */
+    margin-top: -80px;
 }
 .profile-picture {
     width: 160px;
@@ -71,6 +70,7 @@
 .action-buttons .btn {
     padding: 8px 20px;
     font-size: 0.9rem;
+    font-weight: 700;
 }
 .profile-stats {
     display: flex;
@@ -96,6 +96,37 @@
     margin: 0;
 }
 
+/* منوی سه نقطه */
+.profile-actions-menu { position: relative; }
+.profile-actions-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 5px;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.4);
+    width: 220px;
+    z-index: 10;
+    overflow: hidden;
+}
+.profile-actions-dropdown.open { display: block; }
+.profile-actions-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 12px 15px;
+    color: var(--text-secondary-color);
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+.profile-actions-dropdown a:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+
 /* --- گام ۳: استایل بخش استوری ناول‌ها --- */
 .story-section {
     margin-bottom: 30px;
@@ -110,7 +141,7 @@
     height: 80px;
     border-radius: 50%;
     flex-shrink: 0;
-    padding: 4px; /* فضا برای گرادینت */
+    padding: 4px;
     background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
     display: flex;
     justify-content: center;
@@ -161,7 +192,7 @@
     font-weight: 700;
 }
 .profile-content-tabs .donate-link {
-    color: #4caf50; /* رنگ سبز برای دونیت */
+    color: #4caf50;
 }
 .profile-content-tabs .donate-link:hover {
     color: #66bb6a;
@@ -222,7 +253,108 @@
     color: var(--primary-color);
 }
 
-/* --- گام ۶: واکنش‌گرایی --- */
+/* --- گام ۶: استایل تب پست‌ها --- */
+.create-post-box {
+    background-color: var(--surface-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 1px solid var(--border-color);
+}
+.create-post-box h3 { margin: 0 0 15px; font-size: 1.2rem; }
+.create-post-box textarea {
+    width: 100%;
+    padding: 12px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 1rem;
+    resize: vertical;
+}
+.create-post-box .form-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+.image-upload-label {
+    cursor: pointer;
+    color: var(--text-secondary-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.image-upload-label:hover { color: var(--primary-color); }
+.image-preview-container { margin-top: 15px; }
+.image-preview-container img { max-width: 100px; max-height: 100px; border-radius: 8px; }
+
+#posts-container .post-card {
+    background-color: var(--surface-color);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 20px;
+}
+#posts-container .post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+}
+#posts-container .author-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+#posts-container .author-info img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+#posts-container .author-name {
+    font-weight: 700;
+    color: var(--text-color);
+}
+#posts-container .post-timestamp {
+    font-size: 0.8rem;
+    color: var(--text-secondary-color);
+}
+#posts-container .post-content {
+    padding: 0 15px 15px;
+    line-height: 1.7;
+}
+#posts-container .post-content p {
+    margin: 0 0 15px;
+}
+#posts-container .post-image {
+    width: 100%;
+    max-height: 500px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+#posts-container .post-footer {
+    padding: 10px 15px;
+    border-top: 1px solid var(--border-color);
+}
+#posts-container .post-actions {
+    display: flex;
+    gap: 20px;
+}
+#posts-container .action-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* --- گام ۷: واکنش‌گرایی --- */
 @media (max-width: 768px) {
     .header-content {
         flex-direction: column;
@@ -246,4 +378,4 @@
     .works-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
-}
+        }
