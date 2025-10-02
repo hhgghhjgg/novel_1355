@@ -1,0 +1,189 @@
+/* form-style.css */
+
+/*
+=====================================================
+    NovelWorld - Central Form Stylesheet
+    Version: 1.0 (Final, Unabridged)
+=====================================================
+    - این فایل استایل‌های مشترک برای تمام فرم‌های سایت را تعریف می‌کند.
+    - برای استفاده در صفحاتی مانند edit_profile.php، login.php و ... طراحی شده است.
+*/
+
+/* --- کانتینر اصلی صفحه فرم --- */
+.form-page-container {
+    max-width: 700px;
+    margin: 40px auto;
+    padding: 0 15px;
+}
+
+.form-wrapper {
+    background-color: var(--surface-color);
+    border-radius: 16px;
+    padding: 30px 40px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.form-wrapper h2 {
+    text-align: center;
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: var(--primary-color);
+}
+
+/* --- استایل عمومی گروه‌های فرم --- */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-secondary-color);
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="password"],
+.form-group input[type="url"],
+.form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 1rem;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.form-group input:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.2);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* --- جداکننده --- */
+.form-divider {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 30px 0;
+}
+
+/* --- بخش آپلود و پیش‌نمایش تصویر --- */
+.image-preview-box {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background-color: var(--bg-color);
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px dashed var(--border-color);
+}
+
+.image-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--border-color);
+}
+.header-preview {
+    width: 120px;
+    height: 60px;
+    border-radius: 8px;
+}
+
+.form-group input[type="file"] {
+    color: var(--text-secondary-color);
+    font-size: 0.9rem;
+}
+
+/* --- دکمه‌های فرم --- */
+.form-actions {
+    margin-top: 30px;
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 25px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover-color);
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background-color: var(--border-color);
+    color: var(--text-secondary-color);
+}
+.btn-secondary:hover {
+    background-color: #3c392f;
+    color: var(--text-color);
+}
+
+
+/* --- پیام‌های خطا و موفقیت --- */
+.error-box, .success-box {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid;
+}
+.error-box {
+    background-color: rgba(211, 47, 47, 0.1);
+    border-color: var(--danger-color);
+    color: #ff8a8a;
+}
+.error-box p { margin: 0; }
+.success-box {
+    background-color: rgba(67, 160, 71, 0.1);
+    border-color: #43a047;
+    color: #81c784;
+}
+.success-box p { margin: 0; }
+
+
+/* --- واکنش‌گرایی --- */
+@media (max-width: 600px) {
+    .form-wrapper {
+        padding: 20px;
+    }
+    .form-wrapper h2 {
+        font-size: 1.8rem;
+    }
+    .image-preview-box {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
