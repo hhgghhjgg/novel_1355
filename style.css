@@ -1,13 +1,13 @@
-/* style.css (Final, Unabridged, Single Dark Theme) */
+/* style.css (Final, Unabridged, NO BLUR) */
 
 /*
 =====================================================
     NovelWorld - Main Stylesheet (Final Version)
-    Version: 2.4
+    Version: 2.6
 =====================================================
-    - این نسخه نهایی، تمام استایل‌های لازم برای UI جدید سایت
-      را در یک فایل واحد و با تم تاریک پیش‌فرض پیاده‌سازی می‌کند.
-    - نیازی به فایل themes.css یا قابلیت تغییر تم ندارد.
+    - این نسخه شامل اصلاحات درخواستی کاربر است:
+    - افکت تاری (blur) از هیرو اسلایدر به طور کامل حذف شده است.
+    - عرض کارت‌ها برای نمایش تعداد بیشتر در اسلایدرها بهینه شده است.
 */
 
 /* --- گام ۱: تعریف رنگ‌ها و استایل‌های پایه --- */
@@ -57,11 +57,14 @@ a:hover {
 }
 .hero-background {
     position: absolute;
-    top: -10%; left: -10%;
-    width: 120%; height: 120%;
+    top: 0; left: 0; /* موقعیت را به 0 تغییر دادم برای پوشش کامل */
+    width: 100%; height: 100%;
     background-size: cover;
     background-position: center;
-    filter: blur(15px) brightness(0.6);
+    
+    /* *** تغییر کلیدی: افکت blur حذف شد و فقط brightness باقی ماند *** */
+    filter: brightness(0.6);
+    
     transition: background-image 0.5s ease-in-out;
 }
 .hero-overlay {
@@ -182,30 +185,20 @@ a:hover {
     gap: 15px;
     overflow-x: auto;
     padding-bottom: 15px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border-color) var(--surface-color);
+    scrollbar-width: none; /* مخفی کردن اسکرول بار در فایرفاکس */
 }
+/* مخفی کردن اسکرول بار در مرورگرهای Webkit (Chrome, Safari) */
 .manhwa-carousel::-webkit-scrollbar, 
 .genre-carousel::-webkit-scrollbar, 
 .latest-chapters-carousel::-webkit-scrollbar {
-    height: 8px;
+    display: none;
 }
-.manhwa-carousel::-webkit-scrollbar-track, 
-.genre-carousel::-webkit-scrollbar-track, 
-.latest-chapters-carousel::-webkit-scrollbar-track {
-    background: var(--surface-color);
-    border-radius: 4px;
-}
-.manhwa-carousel::-webkit-scrollbar-thumb, 
-.genre-carousel::-webkit-scrollbar-thumb, 
-.latest-chapters-carousel::-webkit-scrollbar-thumb {
-    background: var(--border-color);
-    border-radius: 4px;
-}
+
 
 /* --- گام ۴: استایل کارت‌های ناول/مانهوا --- */
 .manhwa-card {
-    flex: 0 0 160px;
+    /* عرض کارت‌ها کاهش یافت تا تعداد بیشتری در صفحه جا شوند */
+    flex: 0 0 120px; 
     text-decoration: none;
     display: flex;
     flex-direction: column;
@@ -249,14 +242,15 @@ a:hover {
     color: var(--text-color);
     font-size: 1rem;
     font-weight: 500;
-    height: 2.4em;
+    height: 2.4em; /* اجازه نمایش دو خط از عنوان */
     line-height: 1.2em;
     overflow: hidden;
 }
 
 /* --- گام ۵: استایل کاروسل ژانرها (افقی) --- */
 .genre-card {
-    flex: 0 0 140px;
+    /* عرض کارت‌ها برای هماهنگی کاهش یافت */
+    flex: 0 0 120px;
     background: var(--surface-color);
     padding: 20px;
     border-radius: 12px;
@@ -335,5 +329,9 @@ a:hover {
     .hero-carousel { display: none; }
     .hero-text h1 { font-size: 2.5rem; }
     .hero-text p { font-size: 1rem; }
-    .manhwa-card { flex-basis: 140px; }
+    
+    .manhwa-card {
+        /* عرض کارت‌ها در موبایل برای نمایش تعداد بیشتر */
+        flex-basis: 110px; 
+    }
 }
