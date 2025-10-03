@@ -1,334 +1,97 @@
-/* style.css (Final, Unabridged, with All User Requested Changes) */
-
 /*
 =====================================================
-    NovelWorld - Main Stylesheet (Final Version)
-    Version: 2.7
+    NovelWorld - Profile Page Stylesheet (profile-style.css)
+    Version: 2.0 (Action-Oriented Design)
 =====================================================
-    - افکت تاری از هیرو اسلایدر حذف شده است.
-    - عرض کارت‌ها برای نمایش تعداد بیشتر بهینه شده است.
-    - اندازه فونت عناوین بخش‌ها (section-title) کوچک‌تر شده است.
 */
-
-/* --- گام ۱: تعریف رنگ‌ها و استایل‌های پایه --- */
-:root {
-    --bg-color: #13110B;
-    --surface-color: #1c1a14;
-    --primary-color: #FFC107;
-    --primary-hover-color: #FFD54F;
-    --text-color: #f0f0f0;
-    --text-secondary-color: #a0a0a0;
-    --border-color: #2f2c21;
-    --danger-color: #d32f2f;
+.profile-page {
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 0 15px;
 }
-
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
-body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    font-family: 'Vazirmatn', sans-serif;
-    margin: 0;
-    direction: rtl;
-    padding-top: 70px;
-}
-
-a {
-    color: var(--primary-color);
-    text-decoration: none;
-}
-a:hover {
-    text-decoration: underline;
-}
-
-/* --- گام ۲: استایل‌های هیرو اسلایدر سینمایی --- */
-.cinematic-hero {
-    position: relative;
-    height: 70vh;
-    min-height: 550px;
-    width: 100%;
-    color: white;
+.profile-card {
+    background-color: var(--surface-color);
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
     overflow: hidden;
-    margin-bottom: 40px;
+    border: 1px solid var(--border-color);
 }
-.hero-background {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background-size: cover;
-    background-position: center;
-    /* *** افکت blur به درخواست شما حذف شد *** */
-    filter: brightness(0.6);
-    transition: background-image 0.5s ease-in-out;
-}
-.hero-overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(90deg, var(--bg-color) 20%, transparent 50%, var(--bg-color) 100%);
-}
-.hero-content {
+
+/* --- بخش هدر پروفایل --- */
+.profile-header {
     position: relative;
-    z-index: 2;
-    max-width: 1200px;
-    margin: 0 auto;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    gap: 50px;
-    padding: 0 30px;
+    text-align: center;
+    padding-bottom: 20px;
 }
-.hero-text {
-    flex-basis: 50%;
+.profile-banner {
+    height: 150px;
+    background-image: linear-gradient(to top right, #3a2d0b, #13110B);
 }
-.hero-text h1 {
-    font-size: 3rem;
-    font-weight: 800;
-    margin-bottom: 15px;
-    text-shadow: 1px 1px 10px rgba(0,0,0,0.5);
-    transition: all 0.3s ease;
+.profile-picture-container {
+    margin-top: -60px; /* برای روی هم افتادن عکس و بنر */
+    position: relative;
+    display: inline-block;
 }
-.hero-text p {
-    font-size: 1.1rem;
-    color: var(--text-secondary-color);
-    line-height: 1.7;
-    max-height: 100px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-}
-.btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 25px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 700;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-.btn-primary {
+.profile-picture {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
     background-color: var(--primary-color);
     color: var(--bg-color);
-    margin-top: 20px;
-}
-.btn-primary:hover {
-    background-color: var(--primary-hover-color);
-}
-.hero-carousel {
-    flex-basis: 50%;
     display: flex;
-    gap: 15px;
     justify-content: center;
     align-items: center;
+    font-size: 3.5rem;
+    font-weight: 800;
+    border: 5px solid var(--surface-color);
 }
-.hero-card {
-    width: 100px;
-    height: 150px;
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-    flex-shrink: 0;
-}
-.hero-card img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.hero-card.active {
-    transform: scale(1.15);
-    border-color: var(--primary-color);
-    box-shadow: 0 0 20px rgba(255, 193, 7, 0.5);
-}
-
-/* --- گام ۳: استایل‌های عمومی بخش‌ها و کاروسل‌ها --- */
-.content-section {
-    max-width: 1200px;
-    margin: 0 auto 40px auto;
-    padding: 0 30px;
-}
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-.section-title {
-    /* *** اندازه فونت به درخواست شما کوچک‌تر شد *** */
-    font-size: 1.3rem; 
-    display: flex;
-    align-items: center;
-}
-.section-title .material-symbols-outlined {
-    vertical-align: middle;
-    margin-left: 10px;
-    color: var(--primary-color);
-    font-size: 1.6rem;
-}
-.view-all {
-    color: var(--text-secondary-color);
-    text-decoration: none;
-    font-weight: 500;
-}
-.view-all:hover {
-    color: var(--primary-color);
-}
-.manhwa-carousel, .genre-carousel, .latest-chapters-carousel {
-    display: flex;
-    gap: 15px;
-    overflow-x: auto;
-    padding-bottom: 15px;
-    scrollbar-width: none;
-}
-.manhwa-carousel::-webkit-scrollbar, 
-.genre-carousel::-webkit-scrollbar, 
-.latest-chapters-carousel::-webkit-scrollbar {
-    display: none;
-}
-
-/* --- گام ۴: استایل کارت‌های ناول/مانهوا --- */
-.manhwa-card {
-    /* *** عرض کارت‌ها برای نمایش تعداد بیشتر کاهش یافت *** */
-    flex: 0 0 120px; 
-    text-decoration: none;
-    display: flex;
-    flex-direction: column;
-}
-.card-image-container {
-    position: relative;
-    aspect-ratio: 2 / 3;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
-.card-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-.manhwa-card:hover .card-img {
-    transform: scale(1.1);
-}
-.card-badges {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-}
-.badge {
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 700;
-}
-.rating-badge {
-    background-color: rgba(0,0,0,0.7);
-    color: var(--primary-color);
-}
-.card-content {
+.profile-info {
     margin-top: 10px;
-    flex-grow: 1;
 }
-.card-title {
+.profile-info h2 {
+    margin: 0 0 5px 0;
+    font-size: 1.8rem;
     color: var(--text-color);
-    font-size: 1rem;
-    font-weight: 500;
-    height: 2.4em;
-    line-height: 1.2em;
-    overflow: hidden;
 }
-
-/* --- گام ۵: استایل کاروسل ژانرها (افقی) --- */
-.genre-card {
-    /* *** عرض کارت‌ها برای هماهنگی با بقیه کاهش یافت *** */
-    flex: 0 0 120px;
-    background: var(--surface-color);
-    padding: 20px;
-    border-radius: 12px;
-    text-align: center;
-    text-decoration: none;
-    color: var(--text-color);
-    transition: all 0.2s ease;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
-.genre-card:hover {
-    transform: translateY(-5px);
-    background: var(--border-color);
-}
-.genre-card .genre-icon {
-    font-size: 38px;
-    color: var(--primary-color);
-}
-.genre-card .genre-name {
-    display: block;
-    margin-top: 10px;
-    font-size: 0.9rem;
-    font-weight: 500;
-}
-
-/* --- گام ۶: استایل کاروسل آخرین چپترها --- */
-.chapter-card {
-    position: relative;
-    flex: 0 0 250px;
-    height: 150px;
-    border-radius: 8px;
-    overflow: hidden;
-    display: block;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-}
-.chapter-card-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-.chapter-card:hover .chapter-card-img {
-    transform: scale(1.1);
-}
-.chapter-card-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 15px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.9));
-    color: white;
-}
-.chapter-card-novel-title {
+.profile-info p {
     margin: 0;
-    font-size: 1rem;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.chapter-card-title {
-    margin: 5px 0 0;
+    color: var(--text-secondary-color);
     font-size: 0.9rem;
-    color: var(--primary-color);
 }
 
-/* --- گام ۷: واکنش‌گرایی --- */
-@media (max-width: 768px) {
-    body { padding-top: 60px; }
-    .content-section { padding: 0 15px; }
-    .hero-content { flex-direction: column; justify-content: flex-end; padding-bottom: 20px; text-align: center; }
-    .hero-text { flex-basis: auto; }
-    .hero-carousel { display: none; }
-    .hero-text h1 { font-size: 2.5rem; }
-    .hero-text p { font-size: 1rem; }
-    
-    .manhwa-card {
-        /* *** عرض کارت‌ها در موبایل برای نمایش تعداد بیشتر *** */
-        flex-basis: 110px; 
-    }
+/* --- بخش دکمه‌های اقدام --- */
+.profile-actions-list {
+    padding: 15px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.action-link {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text-secondary-color);
+    font-weight: 500;
+    font-size: 1rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.action-link:hover {
+    background-color: var(--border-color);
+    color: var(--text-color);
+}
+.action-link svg {
+    flex-shrink: 0;
+    stroke: currentColor;
+}
+/* استایل خاص برای دکمه خروج برای جلب توجه و جلوگیری از کلیک اشتباه */
+.action-link.logout-link {
+    color: #ff8a8a;
+}
+.action-link.logout-link:hover {
+    background-color: rgba(255, 77, 77, 0.1);
+    color: #ff4d4d;
 }
