@@ -1,19 +1,21 @@
+/* style.css (Final, Unabridged, with All User Requested Changes) */
+
 /*
 =====================================================
-    NovelWorld - Main Stylesheet (Final Overhaul)
-    Version: 3.0
+    NovelWorld - Main Stylesheet (Final Version)
+    Version: 2.7
 =====================================================
-    - این یک بازطراحی کامل بصری برای صفحه اصلی است.
-    - شامل پالت رنگی جدید، کارت‌های مدرن و انیمیشن‌های پیشرفته است.
+    - افکت تاری از هیرو اسلایدر حذف شده است.
+    - عرض کارت‌ها برای نمایش تعداد بیشتر بهینه شده است.
+    - اندازه فونت عناوین بخش‌ها (section-title) کوچک‌تر شده است.
 */
 
-/* --- گام ۱: تعریف متغیرهای جدید و استایل‌های پایه --- */
+/* --- گام ۱: تعریف رنگ‌ها و استایل‌های پایه --- */
 :root {
-    --bg-color: #100f0a; /* پس‌زمینه جدید و تیره‌تر */
+    --bg-color: #13110B;
     --surface-color: #1c1a14;
     --primary-color: #FFC107;
     --primary-hover-color: #FFD54F;
-    --glow-color: rgba(255, 193, 7, 0.3); /* برای افکت درخشش کارت‌ها */
     --text-color: #f0f0f0;
     --text-secondary-color: #a0a0a0;
     --border-color: #2f2c21;
@@ -28,8 +30,6 @@
 
 body {
     background-color: var(--bg-color);
-    /* گرادیانت نامحسوس برای عمق بخشیدن به صفحه */
-    background-image: linear-gradient(180deg, #100f0a 0%, #1c1a14 100%);
     color: var(--text-color);
     font-family: 'Vazirmatn', sans-serif;
     margin: 0;
@@ -45,7 +45,7 @@ a:hover {
     text-decoration: underline;
 }
 
-/* --- گام ۲: استایل‌های هیرو اسلایدر سینمایی (اصلاح شده) --- */
+/* --- گام ۲: استایل‌های هیرو اسلایدر سینمایی --- */
 .cinematic-hero {
     position: relative;
     height: 70vh;
@@ -61,7 +61,8 @@ a:hover {
     width: 100%; height: 100%;
     background-size: cover;
     background-position: center;
-    filter: brightness(0.6); /* افکت تاری حذف شد */
+    /* *** افکت blur به درخواست شما حذف شد *** */
+    filter: brightness(0.6);
     transition: background-image 0.5s ease-in-out;
 }
 .hero-overlay {
@@ -146,30 +147,29 @@ a:hover {
     box-shadow: 0 0 20px rgba(255, 193, 7, 0.5);
 }
 
-/* --- گام ۳: استایل‌های عمومی بخش‌ها و کاروسل‌ها (با تایپوگرافی جدید) --- */
+/* --- گام ۳: استایل‌های عمومی بخش‌ها و کاروسل‌ها --- */
 .content-section {
     max-width: 1200px;
-    margin: 0 auto 50px auto; /* افزایش فاصله بین بخش‌ها */
+    margin: 0 auto 40px auto;
     padding: 0 30px;
 }
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px; /* افزایش فاصله هدر */
+    margin-bottom: 20px;
 }
 .section-title {
-    font-family: 'Lalezar', cursive; /* فونت سینمایی و جذاب */
-    font-size: 1.8rem;
+    /* *** اندازه فونت به درخواست شما کوچک‌تر شد *** */
+    font-size: 1.3rem; 
     display: flex;
     align-items: center;
-    color: var(--text-color);
 }
 .section-title .material-symbols-outlined {
     vertical-align: middle;
-    margin-left: 15px;
+    margin-left: 10px;
     color: var(--primary-color);
-    font-size: 2.2rem;
+    font-size: 1.6rem;
 }
 .view-all {
     color: var(--text-secondary-color);
@@ -181,7 +181,7 @@ a:hover {
 }
 .manhwa-carousel, .genre-carousel, .latest-chapters-carousel {
     display: flex;
-    gap: 20px; /* افزایش فاصله بین کارت‌ها */
+    gap: 15px;
     overflow-x: auto;
     padding-bottom: 15px;
     scrollbar-width: none;
@@ -192,106 +192,61 @@ a:hover {
     display: none;
 }
 
-
-/* ======================================= */
-/* === گام ۴: طراحی جدید کارت‌ها (Master Card) === */
-/* ======================================= */
-
-.master-card {
-    display: block;
-    position: relative;
-    border-radius: 12px;
-    overflow: hidden;
-    aspect-ratio: 2 / 3;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    border: 1px solid var(--border-color);
-    flex: 0 0 160px; /* اندازه پایه جدید برای کارت‌ها */
+/* --- گام ۴: استایل کارت‌های ناول/مانهوا --- */
+.manhwa-card {
+    /* *** عرض کارت‌ها برای نمایش تعداد بیشتر کاهش یافت *** */
+    flex: 0 0 120px; 
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
 }
-
-.master-card-img {
+.card-image-container {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.card-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: transform 0.3s ease;
 }
-
-.master-card-overlay {
+.manhwa-card:hover .card-img {
+    transform: scale(1.1);
+}
+.card-badges {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 12px;
-    background: linear-gradient(to top, rgba(0,0,0,0.95) 15%, transparent 60%);
-    transition: background 0.4s ease;
+    top: 8px;
+    right: 8px;
 }
-
-.master-card-badges {
-    display: flex;
-    justify-content: space-between;
-    opacity: 0.9;
-}
-
-.master-card .badge {
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.7rem;
+.badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
     font-weight: 700;
-    background-color: rgba(28, 26, 20, 0.7);
-    backdrop-filter: blur(5px);
+}
+.rating-badge {
+    background-color: rgba(0,0,0,0.7);
+    color: var(--primary-color);
+}
+.card-content {
+    margin-top: 10px;
+    flex-grow: 1;
+}
+.card-title {
     color: var(--text-color);
-    border: 1px solid rgba(255,255,255,0.1);
-}
-
-.master-card .rating-badge {
-    color: var(--primary-color);
-}
-
-.master-card-content {
-    transform: translateY(20px);
-    opacity: 0;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.master-card-title {
-    color: white;
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin: 0 0 5px 0;
-}
-
-.master-card-action {
-    color: var(--primary-color);
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 500;
-}
-
-/* --- افکت‌های هاور (Hover) برای Master Card --- */
-.master-card:hover {
-    transform: translateY(-10px) scale(1.03);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.7), 0 0 20px var(--glow-color);
-    border-color: var(--primary-color);
-}
-
-.master-card:hover .master-card-img {
-    transform: scale(1.15);
-}
-
-.master-card:hover .master-card-overlay {
-    background: linear-gradient(to top, rgba(0,0,0,1) 25%, transparent 70%);
-}
-
-.master-card:hover .master-card-content {
-    transform: translateY(0);
-    opacity: 1;
+    height: 2.4em;
+    line-height: 1.2em;
+    overflow: hidden;
 }
 
 /* --- گام ۵: استایل کاروسل ژانرها (افقی) --- */
 .genre-card {
+    /* *** عرض کارت‌ها برای هماهنگی با بقیه کاهش یافت *** */
     flex: 0 0 120px;
     background: var(--surface-color);
     padding: 20px;
@@ -372,7 +327,8 @@ a:hover {
     .hero-text h1 { font-size: 2.5rem; }
     .hero-text p { font-size: 1rem; }
     
-    .master-card {
-        flex-basis: 140px; 
+    .manhwa-card {
+        /* *** عرض کارت‌ها در موبایل برای نمایش تعداد بیشتر *** */
+        flex-basis: 110px; 
     }
-    }
+        }
