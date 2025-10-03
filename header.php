@@ -1,8 +1,17 @@
 <?php
-// header.php (نسخه نهایی - بدون JWT)
+// header.php (نسخه کامل و نهایی)
+
+/*
+=====================================================
+    NovelWorld - Main Site Header
+    Version: 3.2 (Final, Corrected Icons)
+=====================================================
+    - این نسخه کامل شامل لینک صحیح به فونت آیکون Material Symbols
+      برای حل مشکل نمایش متنی آیکون‌ها است.
+    - از سیستم احراز هویت مبتنی بر کوکی و سشن دیتابیس استفاده می‌کند.
+*/
 
 // --- گام ۱: فراخوانی فایل اتصال به دیتابیس ---
-// این فایل باید قبل از هر منطق دیگری فراخوانی شود.
 require_once 'db_connect.php';
 
 // --- گام ۲: آماده‌سازی متغیرهای پیش‌فرض کاربر ---
@@ -55,6 +64,9 @@ if (isset($_COOKIE['user_session'])) {
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="header-style.css"> 
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <!-- *** این خط برای نمایش صحیح آیکون‌ها ضروری است *** -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 </head>
 <body>
     
