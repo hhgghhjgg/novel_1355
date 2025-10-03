@@ -1,13 +1,13 @@
-/* style.css (Final, Unabridged, NO BLUR) */
+/* style.css (Final, Unabridged, with All User Requested Changes) */
 
 /*
 =====================================================
     NovelWorld - Main Stylesheet (Final Version)
-    Version: 2.6
+    Version: 2.7
 =====================================================
-    - این نسخه شامل اصلاحات درخواستی کاربر است:
-    - افکت تاری (blur) از هیرو اسلایدر به طور کامل حذف شده است.
-    - عرض کارت‌ها برای نمایش تعداد بیشتر در اسلایدرها بهینه شده است.
+    - افکت تاری از هیرو اسلایدر حذف شده است.
+    - عرض کارت‌ها برای نمایش تعداد بیشتر بهینه شده است.
+    - اندازه فونت عناوین بخش‌ها (section-title) کوچک‌تر شده است.
 */
 
 /* --- گام ۱: تعریف رنگ‌ها و استایل‌های پایه --- */
@@ -34,7 +34,7 @@ body {
     font-family: 'Vazirmatn', sans-serif;
     margin: 0;
     direction: rtl;
-    padding-top: 70px; /* فاصله برای هدر ثابت */
+    padding-top: 70px;
 }
 
 a {
@@ -57,14 +57,12 @@ a:hover {
 }
 .hero-background {
     position: absolute;
-    top: 0; left: 0; /* موقعیت را به 0 تغییر دادم برای پوشش کامل */
+    top: 0; left: 0;
     width: 100%; height: 100%;
     background-size: cover;
     background-position: center;
-    
-    /* *** تغییر کلیدی: افکت blur حذف شد و فقط brightness باقی ماند *** */
+    /* *** افکت blur به درخواست شما حذف شد *** */
     filter: brightness(0.6);
-    
     transition: background-image 0.5s ease-in-out;
 }
 .hero-overlay {
@@ -162,7 +160,8 @@ a:hover {
     margin-bottom: 20px;
 }
 .section-title {
-    font-size: 1.5rem;
+    /* *** اندازه فونت به درخواست شما کوچک‌تر شد *** */
+    font-size: 1.3rem; 
     display: flex;
     align-items: center;
 }
@@ -170,7 +169,7 @@ a:hover {
     vertical-align: middle;
     margin-left: 10px;
     color: var(--primary-color);
-    font-size: 1.8rem;
+    font-size: 1.6rem;
 }
 .view-all {
     color: var(--text-secondary-color);
@@ -185,19 +184,17 @@ a:hover {
     gap: 15px;
     overflow-x: auto;
     padding-bottom: 15px;
-    scrollbar-width: none; /* مخفی کردن اسکرول بار در فایرفاکس */
+    scrollbar-width: none;
 }
-/* مخفی کردن اسکرول بار در مرورگرهای Webkit (Chrome, Safari) */
 .manhwa-carousel::-webkit-scrollbar, 
 .genre-carousel::-webkit-scrollbar, 
 .latest-chapters-carousel::-webkit-scrollbar {
     display: none;
 }
 
-
 /* --- گام ۴: استایل کارت‌های ناول/مانهوا --- */
 .manhwa-card {
-    /* عرض کارت‌ها کاهش یافت تا تعداد بیشتری در صفحه جا شوند */
+    /* *** عرض کارت‌ها برای نمایش تعداد بیشتر کاهش یافت *** */
     flex: 0 0 120px; 
     text-decoration: none;
     display: flex;
@@ -242,14 +239,14 @@ a:hover {
     color: var(--text-color);
     font-size: 1rem;
     font-weight: 500;
-    height: 2.4em; /* اجازه نمایش دو خط از عنوان */
+    height: 2.4em;
     line-height: 1.2em;
     overflow: hidden;
 }
 
 /* --- گام ۵: استایل کاروسل ژانرها (افقی) --- */
 .genre-card {
-    /* عرض کارت‌ها برای هماهنگی کاهش یافت */
+    /* *** عرض کارت‌ها برای هماهنگی با بقیه کاهش یافت *** */
     flex: 0 0 120px;
     background: var(--surface-color);
     padding: 20px;
@@ -331,7 +328,7 @@ a:hover {
     .hero-text p { font-size: 1rem; }
     
     .manhwa-card {
-        /* عرض کارت‌ها در موبایل برای نمایش تعداد بیشتر */
+        /* *** عرض کارت‌ها در موبایل برای نمایش تعداد بیشتر *** */
         flex-basis: 110px; 
     }
-}
+        }
