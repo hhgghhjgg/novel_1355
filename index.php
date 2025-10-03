@@ -2,15 +2,15 @@
 /*
 =====================================================
     NovelWorld - Main Index Page
-    Version: 2.5 (Corrected & Enhanced)
+    Version: 2.7 (Final, Corrected Icons & Links)
 =====================================================
-    - این نسخه کامل شامل تمام قابلیت‌های صفحه اصلی است.
-    - لینک اسلایدر "آخرین چپترها" اصلاح شده تا به صفحه جزئیات ناول برود.
+    - این نسخه شامل آیکون اصلاح شده 'edit' برای بخش ناول‌های ایرانی است.
+    - لینک اسلایدر "آخرین چپترها" به صفحه جزئیات ناول اشاره می‌کند.
     - اسکریپت هیرو اسلایدر برای اسلاید خودکار بهبود یافته است.
 */
 
 // --- گام ۱: فراخوانی هدر و اتصال به دیتابیس ---
-require_once 'header.php'; // شامل اتصال دیتابیس ($conn) و اطلاعات کاربر
+require_once 'header.php';
 
 // --- گام ۲: واکشی داده‌ها برای تمام بخش‌ها ---
 $hero_slides = [];
@@ -41,7 +41,6 @@ try {
     $top_translated = $conn->query("SELECT id, title, cover_url, rating FROM novels WHERE origin = 'translated' ORDER BY rating DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
-    // در صورت بروز خطا، آن را لاگ می‌کنیم تا صفحه برای کاربر خالی نماند.
     error_log("Index Page Fetch Error: " . $e->getMessage());
 }
 
@@ -54,11 +53,9 @@ $all_genres = [
     ['name' => 'هنرهای رزمی', 'icon' => 'sports_martial_arts'], ['name' => 'معمایی', 'icon' => 'search'],
     ['name' => 'ترسناک', 'icon' => 'mood_bad'], ['name' => 'مدرسه‌ای', 'icon' => 'school'],
 ];
-// نمایش ۱۰ ژانر برتر در صفحه اصلی
 $top_genres = array_slice($all_genres, 0, 10);
 ?>
 
-<!-- شروع بخش HTML -->
 <main>
     <!-- ۱. هیرو اسلایدر سینمایی -->
     <section class="cinematic-hero">
@@ -112,7 +109,6 @@ $top_genres = array_slice($all_genres, 0, 10);
             <?php foreach ($latest_chapters as $chapter): 
                 $optimized_cover = str_replace("/upload/", "/upload/c_fill,h_300,w_500,q_auto,f_auto/", $chapter['cover_url']);
             ?>
-                <!-- *** تغییر کلیدی: لینک به صفحه جزئیات ناول تغییر کرد *** -->
                 <a href="novel_detail.php?id=<?php echo $chapter['novel_id']; ?>" class="chapter-card">
                     <img src="<?php echo htmlspecialchars($optimized_cover); ?>" alt="<?php echo htmlspecialchars($chapter['novel_title']); ?>" class="chapter-card-img">
                     <div class="chapter-card-overlay">
@@ -129,7 +125,8 @@ $top_genres = array_slice($all_genres, 0, 10);
     <?php if (!empty($newest_originals)): ?>
     <section class="content-section">
         <div class="section-header">
-            <h2 class="section-title"><span class="material-symbols-outlined">pen_spark</span>ناول‌های ایرانی</h2>
+            <!-- *** آیکون pen_spark به edit تغییر کرد *** -->
+            <h2 class="section-title"><span class="material-symbols-outlined">edit</span>ناول‌های ایرانی</h2>
             <a href="search.php?origin=original" class="view-all">مشاهده همه</a>
         </div>
         <div class="manhwa-carousel">
@@ -176,10 +173,8 @@ $top_genres = array_slice($all_genres, 0, 10);
     <?php endif; ?>
 </main>
 
-<!-- *** تغییر کلیدی: کد جاوااسکریپت هیرو اسلایدر با قابلیت اسلاید خودکار جایگزین شد *** -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- ماژول: مدیریت هیرو اسلایدر سینمایی (نسخه بهبود یافته با اسلاید خودکار) ---
     const heroCarousel = document.querySelector('.hero-carousel');
     if (heroCarousel) {
         const heroCards = heroCarousel.querySelectorAll('.hero-card');
@@ -190,56 +185,44 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentIndex = 0;
         let slideInterval;
 
-        // تابعی برای به‌روزرسانی محتوای اصلی اسلایدر
         function updateHeroContent(index) {
             const card = heroCards[index];
             if (!card) return;
-
-            // به‌روزرسانی متن و لینک
             if (heroTitle) heroTitle.textContent = card.dataset.title;
             if (heroSummary) heroSummary.textContent = card.dataset.summary;
             if (heroLink) heroLink.href = card.dataset.link;
-            
-            // به‌روزرسانی پس‌زمینه با افکت Fade
             if (heroBackground) {
                 heroBackground.style.opacity = 0;
                 setTimeout(() => {
                     heroBackground.style.backgroundImage = `url('${card.dataset.bg}')`;
                     heroBackground.style.opacity = 1;
-                }, 300); // 300ms for fade effect
+                }, 300);
             }
-
-            // به‌روزرسانی کارت فعال
             heroCarousel.querySelector('.hero-card.active')?.classList.remove('active');
             card.classList.add('active');
             currentIndex = index;
         }
 
-        // تابع برای رفتن به اسلاید بعدی
         function nextSlide() {
             const nextIndex = (currentIndex + 1) % heroCards.length;
             updateHeroContent(nextIndex);
         }
 
-        // راه‌اندازی اسلاید خودکار
         function startAutoplay() {
-            clearInterval(slideInterval); // پاک کردن تایمر قبلی
-            slideInterval = setInterval(nextSlide, 5000); // هر 5 ثانیه
+            clearInterval(slideInterval);
+            slideInterval = setInterval(nextSlide, 5000);
         }
 
-        // مدیریت کلیک روی کارت‌ها
         heroCards.forEach((card, index) => {
             card.addEventListener('click', () => {
                 updateHeroContent(index);
-                startAutoplay(); // ریست کردن تایمر پس از کلیک دستی
+                startAutoplay();
             });
         });
-
-        // شروع اولیه
+        
         if (heroCards.length > 1) {
              startAutoplay();
         }
-        // اضافه کردن یک افکت fade به پس‌زمینه برای زیبایی بیشتر
         if(heroBackground) {
             heroBackground.style.transition = 'opacity 0.3s ease-in-out';
         }
