@@ -1,54 +1,83 @@
 <?php
 // public_profile.php
-
 /*
 =====================================================
-    NovelWorld - Public User Profile Page (Final, Unabridged)
-    Version: 1.1
+    NovelWorld - Public User Profile Page (Final, Corrected)
+    Version: 1.2
 =====================================================
-    - این صفحه پروفایل عمومی کاربران را با تمام قابلیت‌های اجتماعی نمایش می‌دهد.
+    - این نسخه کامل و اصلاح شده، مشکل ارسال نشدن شناسه کاربر
+      به جاوااسکریپت برای بارگذاری پست‌ها را حل می‌کند.
+    - شامل تمام قابلیت‌های اجتماعی: پروفایل عمومی، استوری، پست، دنبال کردن و...
 */
 
+// --- گام ۱: فراخوانی فایل هسته ---
+// core.php شامل اتصال دیتابیس ($conn) و اطلاعات کاربر لاگین کرده ($is_logged_in, $user_id) است.
 require_once 'core.php';
 
+// --- گام ۲: دریافت نام کاربری از URL و واکشی اطلاعات پروفایل ---
 $profile_username = isset($_GET['username']) ? trim($_GET['username']) : '';
 if (empty($profile_username)) {
-    die("خطا: نام کاربری مشخص نشده است.");
+    // اگر نام کاربری در URL نبود، صفحه را با خطا متوقف کن
+    die("خطا: نام کاربری برای نمایش پروفایل مشخص نشده است.");
 }
 
 try {
-    // واکشی اطلاعات کاربری که پروفایلش در حال مشاهده است
+    // واکشی تمام اطلاعات کاربری که پروفایلش در حال مشاهده است
     $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
     $stmt->execute([$profile_username]);
     $profile_user = $stmt->fetch();
 
+    // اگر کاربری با این نام یافت نشد
     if (!$profile_user) {
         die("کاربری با این نام یافت نشد.");
     }
+    // شناسه کاربری که پروفایلش را می‌بینیم
     $profile_user_id = $profile_user['id'];
 
-    // واکشی آمار
-    $works_count = $conn->query("SELECT COUNT(*) FROM novels WHERE author_id = $profile_user_id")->fetchColumn();
-    $followers_count = $conn->query("SELECT COUNT(*) FROM followers WHERE following_id = $profile_user_id")->fetchColumn();
-    $following_count = $conn->query("SELECT COUNT(*) FROM followers WHERE follower_id = $profile_user_id")->fetchColumn();
+    // --- گام ۳: واکشی آمار و اطلاعات تکمیلی ---
 
-    // بررسی دنبال کردن
+    // شمارش تعداد آثار منتشر شده توسط این کاربر
+    $stmt_works = $conn->prepare("SELECT COUNT(*) FROM novels WHERE author_id = ?");
+    $stmt_works->execute([$profile_user_id]);
+    $works_count = $stmt_works->fetchColumn();
+
+    // شمارش تعداد دنبال‌کنندگان (followers)
+    $stmt_followers = $conn->prepare("SELECT COUNT(*) FROM followers WHERE following_id = ?");
+    $stmt_followers->execute([$profile_user_id]);
+    $followers_count = $stmt_followers->fetchColumn();
+
+    // شمارش تعداد کسانی که این کاربر دنبال می‌کند (following)
+    $stmt_following = $conn->prepare("SELECT COUNT(*) FROM followers WHERE follower_id = ?");
+    $stmt_following->execute([$profile_user_id]);
+    $following_count = $stmt_following->fetchColumn();
+
+    // بررسی اینکه آیا کاربر لاگین کرده، این پروفایل را دنبال می‌کند یا نه
     $is_following = false;
     if ($is_logged_in) {
-        $stmt_follow = $conn->prepare("SELECT id FROM followers WHERE follower_id = ? AND following_id = ?");
-        $stmt_follow->execute([$user_id, $profile_user_id]);
-        if ($stmt_follow->fetch()) {
+        $stmt_follow_check = $conn->prepare("SELECT id FROM followers WHERE follower_id = ? AND following_id = ?");
+        $stmt_follow_check->execute([$user_id, $profile_user_id]);
+        if ($stmt_follow_check->fetch()) {
             $is_following = true;
         }
     }
 
-    // واکشی استوری‌ها
-    $stories = $conn->query("SELECT s.id as story_id, n.id as novel_id, n.cover_url FROM novel_stories s JOIN novels n ON s.novel_id = n.id WHERE s.user_id = $profile_user_id AND s.expires_at > NOW() ORDER BY s.created_at DESC LIMIT 10")->fetchAll();
+    // واکشی استوری‌های فعال این کاربر
+    $stmt_stories = $conn->prepare(
+        "SELECT s.id as story_id, n.id as novel_id, n.cover_url 
+         FROM novel_stories s 
+         JOIN novels n ON s.novel_id = n.id 
+         WHERE s.user_id = ? AND s.expires_at > NOW() 
+         ORDER BY s.created_at DESC LIMIT 10"
+    );
+    $stmt_stories->execute([$profile_user_id]);
+    $stories = $stmt_stories->fetchAll();
 
-    // واکشی آثار کاربر
-    $user_novels = $conn->query("SELECT id, title, cover_url, rating, type FROM novels WHERE author_id = $profile_user_id ORDER BY created_at DESC")->fetchAll();
+    // واکشی آثار (ناول‌های) منتشر شده توسط این کاربر
+    $stmt_novels = $conn->prepare("SELECT id, title, cover_url, rating, type FROM novels WHERE author_id = ? ORDER BY created_at DESC");
+    $stmt_novels->execute([$profile_user_id]);
+    $user_novels = $stmt_novels->fetchAll();
 
-    // واکشی ناول‌های کاربر برای مودال استوری (فقط اگر خودش باشد)
+    // واکشی لیست آثار کاربر برای مودال "ایجاد استوری" (فقط اگر خودش پروفایل را می‌بیند)
     $user_novels_for_story = [];
     if ($is_logged_in && $user_id == $profile_user_id) {
         $stmt_story_novels = $conn->prepare("SELECT id, title FROM novels WHERE author_id = ? ORDER BY title ASC");
@@ -57,7 +86,8 @@ try {
     }
 
 } catch (PDOException $e) {
-    die("خطا در بارگذاری اطلاعات پروفایل: " . $e->getMessage());
+    error_log("Public Profile Error: " . $e->getMessage());
+    die("خطا در بارگذاری اطلاعات پروفایل. لطفاً بعداً تلاش کنید.");
 }
 ?>
 <!DOCTYPE html>
@@ -74,7 +104,12 @@ try {
 <body>
     <?php require_once 'header.php'; ?>
 
-    <main class="profile-page-container">
+    <!-- 
+        *** نکته کلیدی برای حل مشکل: ***
+        ما شناسه کاربر پروفایل را در یک data attribute ذخیره می‌کنیم
+        تا جاوااسکریپت بتواند آن را بخواند و برای بارگذاری پست‌ها استفاده کند.
+    -->
+    <main class="profile-page-container" data-profile-userid="<?php echo $profile_user_id; ?>">
         <header class="profile-main-header">
             <div class="header-banner" style="background-image: url('<?php echo htmlspecialchars($profile_user['header_image_url'] ?? 'assets/default_header.jpg'); ?>');"></div>
             <div class="header-content">
@@ -85,9 +120,9 @@ try {
                     <div class="title-and-actions">
                         <h2><?php echo htmlspecialchars($profile_user['username']); ?></h2>
                         <div class="action-buttons">
-                            <?php if ($is_logged_in && $user_id == $profile_user_id): ?>
+                            <?php if ($is_logged_in && $user_id == $profile_user_id): // اگر کاربر مالک پروفایل است ?>
                                 <div class="profile-actions-menu">
-                                    <button id="profile-actions-toggle" class="btn btn-secondary">
+                                    <button id="profile-actions-toggle" class="btn btn-secondary" aria-label="گزینه‌ها">
                                         <span class="material-symbols-outlined">more_horiz</span>
                                     </button>
                                     <div id="profile-actions-dropdown" class="profile-actions-dropdown">
@@ -96,11 +131,11 @@ try {
                                         <a href="library.php"><span class="material-symbols-outlined">collections_bookmark</span> کتابخانه من</a>
                                     </div>
                                 </div>
-                            <?php elseif ($is_logged_in): ?>
+                            <?php elseif ($is_logged_in): // اگر کاربر لاگین کرده ولی مالک نیست ?>
                                 <button id="follow-toggle-btn" class="btn <?php echo $is_following ? 'btn-secondary' : 'btn-primary'; ?>" data-profile-id="<?php echo $profile_user_id; ?>">
                                     <?php echo $is_following ? 'لغو دنبال' : 'دنبال کردن'; ?>
                                 </button>
-                            <?php else: ?>
+                            <?php else: // اگر کاربر مهمان است ?>
                                 <a href="login.php" class="btn btn-primary">دنبال کردن</a>
                             <?php endif; ?>
                         </div>
@@ -160,7 +195,7 @@ try {
                         <div class="create-post-box">
                             <h3>یک پست جدید ایجاد کنید</h3>
                             <form id="create-post-form">
-                                <textarea name="content" placeholder="به چه چیزی فکر می‌کنید، <?php echo $username; ?>؟" rows="4" required></textarea>
+                                <textarea name="content" placeholder="به چه چیزی فکر می‌کنید، <?php echo htmlspecialchars($username); ?>؟" rows="4" required></textarea>
                                 <div id="post-image-preview" class="image-preview-container"></div>
                                 <div class="form-footer">
                                     <label for="post-image-input" class="image-upload-label">
@@ -172,7 +207,9 @@ try {
                             </form>
                         </div>
                     <?php endif; ?>
-                    <div id="posts-container"><p class="empty-tab-message">برای مشاهده پست‌ها، روی تب کلیک کنید.</p></div>
+                    <div id="posts-container">
+                        <p class="empty-tab-message">برای مشاهده پست‌ها، روی تب کلیک کنید.</p>
+                    </div>
                 </div>
             </div>
         </section>
@@ -187,7 +224,7 @@ try {
                 </div>
                 <form id="create-story-form">
                     <?php if (empty($user_novels_for_story)): ?>
-                        <p style="text-align: center; color: var(--text-secondary-color); padding: 20px;">شما ابتدا باید یک اثر منتشر کنید.</p>
+                        <p style="text-align: center; color: var(--text-secondary-color); padding: 20px;">شما برای ایجاد استوری، ابتدا باید یک اثر منتشر کنید.</p>
                     <?php else: ?>
                         <div class="form-group">
                             <label for="story-novel-select">کدام اثر را می‌خواهید پروموت کنید؟</label>
