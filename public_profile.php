@@ -1,235 +1,255 @@
 <?php
+// public_profile.php
 /*
 =====================================================
-    NovelWorld - Main Index Page
-    Version: 2.7 (Final, Corrected Icons & Links)
+    NovelWorld - Public User Profile Page (Final, Corrected)
+    Version: 1.2
 =====================================================
-    - این نسخه شامل آیکون اصلاح شده 'edit' برای بخش ناول‌های ایرانی است.
-    - لینک اسلایدر "آخرین چپترها" به صفحه جزئیات ناول اشاره می‌کند.
-    - اسکریپت هیرو اسلایدر برای اسلاید خودکار بهبود یافته است.
+    - این نسخه کامل و اصلاح شده، مشکل ارسال نشدن شناسه کاربر
+      به جاوااسکریپت برای بارگذاری پست‌ها را حل می‌کند.
+    - شامل تمام قابلیت‌های اجتماعی: پروفایل عمومی، استوری، پست، دنبال کردن و...
 */
 
-// --- گام ۱: فراخوانی هدر و اتصال به دیتابیس ---
-require_once 'header.php';
+// --- گام ۱: فراخوانی فایل هسته ---
+// core.php شامل اتصال دیتابیس ($conn) و اطلاعات کاربر لاگین کرده ($is_logged_in, $user_id) است.
+require_once 'core.php';
 
-// --- گام ۲: واکشی داده‌ها برای تمام بخش‌ها ---
-$hero_slides = [];
-$latest_chapters = [];
-$newest_originals = [];
-$top_translated = [];
-
-try {
-    // ۱. اسلایدر اصلی (۵ اثر برتر)
-    $hero_slides = $conn->query("SELECT id, title, summary, cover_url FROM novels ORDER BY rating DESC, created_at DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
-
-    // ۲. آخرین چپترهای منتشر شده
-    $latest_chapters_stmt = $conn->query(
-        "SELECT c.id, c.chapter_number, c.title as chapter_title, 
-                n.id as novel_id, n.title as novel_title, n.cover_url
-         FROM chapters c
-         JOIN novels n ON c.novel_id = n.id
-         WHERE c.status = 'approved' AND c.published_at <= NOW()
-         ORDER BY c.published_at DESC 
-         LIMIT 10"
-    );
-    $latest_chapters = $latest_chapters_stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // ۳. ناول‌های ایرانی (تالیفی)
-    $newest_originals = $conn->query("SELECT id, title, cover_url, rating FROM novels WHERE origin = 'original' ORDER BY created_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
-    
-    // ۴. آثار ترجمه شده
-    $top_translated = $conn->query("SELECT id, title, cover_url, rating FROM novels WHERE origin = 'translated' ORDER BY rating DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (PDOException $e) {
-    error_log("Index Page Fetch Error: " . $e->getMessage());
+// --- گام ۲: دریافت نام کاربری از URL و واکشی اطلاعات پروفایل ---
+$profile_username = isset($_GET['username']) ? trim($_GET['username']) : '';
+if (empty($profile_username)) {
+    // اگر نام کاربری در URL نبود، صفحه را با خطا متوقف کن
+    die("خطا: نام کاربری برای نمایش پروفایل مشخص نشده است.");
 }
 
-// --- گام ۳: تعریف آرایه ژانرها برای نمایش ---
-$all_genres = [
-    ['name' => 'اکشن', 'icon' => 'bolt'], ['name' => 'فانتزی', 'icon' => 'auto_stories'],
-    ['name' => 'عاشقانه', 'icon' => 'favorite'], ['name' => 'ماجراجویی', 'icon' => 'explore'],
-    ['name' => 'کمدی', 'icon' => 'sentiment_satisfied'], ['name' => 'درام', 'icon' => 'theater_comedy'],
-    ['name' => 'ایسکای', 'icon' => 'public'], ['name' => 'تناسخ', 'icon' => 'history_toggle_off'],
-    ['name' => 'هنرهای رزمی', 'icon' => 'sports_martial_arts'], ['name' => 'معمایی', 'icon' => 'search'],
-    ['name' => 'ترسناک', 'icon' => 'mood_bad'], ['name' => 'مدرسه‌ای', 'icon' => 'school'],
-];
-$top_genres = array_slice($all_genres, 0, 10);
-?>
+try {
+    // واکشی تمام اطلاعات کاربری که پروفایلش در حال مشاهده است
+    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt->execute([$profile_username]);
+    $profile_user = $stmt->fetch();
 
-<main>
-    <!-- ۱. هیرو اسلایدر سینمایی -->
-    <section class="cinematic-hero">
-        <?php if (!empty($hero_slides)): $first_slide = $hero_slides[0]; ?>
-            <div class="hero-background" style="background-image: url('<?php echo htmlspecialchars($first_slide['cover_url']); ?>');"></div>
-            <div class="hero-overlay"></div>
-            <div class="hero-content">
-                <div class="hero-text">
-                    <h1 id="hero-title"><?php echo htmlspecialchars($first_slide['title']); ?></h1>
-                    <p id="hero-summary"><?php echo htmlspecialchars(mb_substr(trim($first_slide['summary']), 0, 150, "UTF-8")) . '...'; ?></p>
-                    <a id="hero-link" href="novel_detail.php?id=<?php echo $first_slide['id']; ?>" class="btn btn-primary">مشاهده جزئیات</a>
-                </div>
-                <div class="hero-carousel">
-                    <?php foreach ($hero_slides as $index => $slide): ?>
-                        <div class="hero-card <?php echo $index === 0 ? 'active' : ''; ?>" 
-                             data-title="<?php echo htmlspecialchars($slide['title']); ?>"
-                             data-summary="<?php echo htmlspecialchars(mb_substr(trim($slide['summary']), 0, 150, "UTF-8")) . '...'; ?>"
-                             data-link="novel_detail.php?id=<?php echo $slide['id']; ?>"
-                             data-bg="<?php echo htmlspecialchars($slide['cover_url']); ?>">
-                            <img src="<?php echo htmlspecialchars($slide['cover_url']); ?>" alt="<?php echo htmlspecialchars($slide['title']); ?>">
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        <?php endif; ?>
-    </section>
+    // اگر کاربری با این نام یافت نشد
+    if (!$profile_user) {
+        die("کاربری با این نام یافت نشد.");
+    }
+    // شناسه کاربری که پروفایلش را می‌بینیم
+    $profile_user_id = $profile_user['id'];
 
-    <!-- ۲. اسلایدر ژانرها (افقی) -->
-    <section class="content-section">
-        <div class="section-header">
-            <h2 class="section-title"><span class="material-symbols-outlined">category</span>مرور ژانرها</h2>
-            <a href="all_genres.php" class="view-all">همه ژانرها</a>
-        </div>
-        <div class="genre-carousel">
-            <?php foreach ($top_genres as $genre): ?>
-                <a href="genre_results.php?genre=<?php echo urlencode($genre['name']); ?>" class="genre-card">
-                    <span class="material-symbols-outlined genre-icon"><?php echo $genre['icon']; ?></span>
-                    <span class="genre-name"><?php echo htmlspecialchars($genre['name']); ?></span>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </section>
-    
-    <!-- ۳. اسلایدر آخرین چپترها -->
-    <?php if (!empty($latest_chapters)): ?>
-    <section class="content-section">
-        <div class="section-header">
-            <h2 class="section-title"><span class="material-symbols-outlined">history</span>آخرین چپترهای منتشر شده</h2>
-        </div>
-        <div class="latest-chapters-carousel">
-            <?php foreach ($latest_chapters as $chapter): 
-                $optimized_cover = str_replace("/upload/", "/upload/c_fill,h_300,w_500,q_auto,f_auto/", $chapter['cover_url']);
-            ?>
-                <a href="novel_detail.php?id=<?php echo $chapter['novel_id']; ?>" class="chapter-card">
-                    <img src="<?php echo htmlspecialchars($optimized_cover); ?>" alt="<?php echo htmlspecialchars($chapter['novel_title']); ?>" class="chapter-card-img">
-                    <div class="chapter-card-overlay">
-                        <h4 class="chapter-card-novel-title"><?php echo htmlspecialchars($chapter['novel_title']); ?></h4>
-                        <p class="chapter-card-title">چپتر <?php echo htmlspecialchars($chapter['chapter_number']); ?></p>
-                    </div>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </section>
-    <?php endif; ?>
+    // --- گام ۳: واکشی آمار و اطلاعات تکمیلی ---
 
-    <!-- ۴. اسلایدر ناول ایرانی (تالیفی) -->
-    <?php if (!empty($newest_originals)): ?>
-    <section class="content-section">
-        <div class="section-header">
-            <!-- *** آیکون pen_spark به edit تغییر کرد *** -->
-            <h2 class="section-title"><span class="material-symbols-outlined">edit</span>ناول‌های ایرانی</h2>
-            <a href="search.php?origin=original" class="view-all">مشاهده همه</a>
-        </div>
-        <div class="manhwa-carousel">
-            <?php foreach ($newest_originals as $novel): 
-                $optimized_cover = str_replace("/upload/", "/upload/c_fill,h_480,w_320,q_auto,f_auto/", $novel['cover_url']);
-            ?>
-                <div class="manhwa-card">
-                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
-                        <div class="card-image-container">
-                            <img src="<?php echo htmlspecialchars($optimized_cover); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img">
-                            <div class="card-badges"><span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span></div>
-                        </div>
-                        <div class="card-content"><h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3></div>
-                    </a>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </section>
-    <?php endif; ?>
+    // شمارش تعداد آثار منتشر شده توسط این کاربر
+    $stmt_works = $conn->prepare("SELECT COUNT(*) FROM novels WHERE author_id = ?");
+    $stmt_works->execute([$profile_user_id]);
+    $works_count = $stmt_works->fetchColumn();
 
-    <!-- ۵. اسلایدر آثار ترجمه شده -->
-    <?php if (!empty($top_translated)): ?>
-    <section class="content-section">
-        <div class="section-header">
-            <h2 class="section-title"><span class="material-symbols-outlined">translate</span>برترین‌های ترجمه</h2>
-            <a href="search.php?origin=translated" class="view-all">مشاهده همه</a>
-        </div>
-        <div class="manhwa-carousel">
-            <?php foreach ($top_translated as $novel): 
-                $optimized_cover = str_replace("/upload/", "/upload/c_fill,h_480,w_320,q_auto,f_auto/", $novel['cover_url']);
-            ?>
-                <div class="manhwa-card">
-                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
-                        <div class="card-image-container">
-                            <img src="<?php echo htmlspecialchars($optimized_cover); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img">
-                            <div class="card-badges"><span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span></div>
-                        </div>
-                        <div class="card-content"><h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3></div>
-                    </a>
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </section>
-    <?php endif; ?>
-</main>
+    // شمارش تعداد دنبال‌کنندگان (followers)
+    $stmt_followers = $conn->prepare("SELECT COUNT(*) FROM followers WHERE following_id = ?");
+    $stmt_followers->execute([$profile_user_id]);
+    $followers_count = $stmt_followers->fetchColumn();
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const heroCarousel = document.querySelector('.hero-carousel');
-    if (heroCarousel) {
-        const heroCards = heroCarousel.querySelectorAll('.hero-card');
-        const heroTitle = document.getElementById('hero-title');
-        const heroSummary = document.getElementById('hero-summary');
-        const heroLink = document.getElementById('hero-link');
-        const heroBackground = document.querySelector('.hero-background');
-        let currentIndex = 0;
-        let slideInterval;
+    // شمارش تعداد کسانی که این کاربر دنبال می‌کند (following)
+    $stmt_following = $conn->prepare("SELECT COUNT(*) FROM followers WHERE follower_id = ?");
+    $stmt_following->execute([$profile_user_id]);
+    $following_count = $stmt_following->fetchColumn();
 
-        function updateHeroContent(index) {
-            const card = heroCards[index];
-            if (!card) return;
-            if (heroTitle) heroTitle.textContent = card.dataset.title;
-            if (heroSummary) heroSummary.textContent = card.dataset.summary;
-            if (heroLink) heroLink.href = card.dataset.link;
-            if (heroBackground) {
-                heroBackground.style.opacity = 0;
-                setTimeout(() => {
-                    heroBackground.style.backgroundImage = `url('${card.dataset.bg}')`;
-                    heroBackground.style.opacity = 1;
-                }, 300);
-            }
-            heroCarousel.querySelector('.hero-card.active')?.classList.remove('active');
-            card.classList.add('active');
-            currentIndex = index;
-        }
-
-        function nextSlide() {
-            const nextIndex = (currentIndex + 1) % heroCards.length;
-            updateHeroContent(nextIndex);
-        }
-
-        function startAutoplay() {
-            clearInterval(slideInterval);
-            slideInterval = setInterval(nextSlide, 5000);
-        }
-
-        heroCards.forEach((card, index) => {
-            card.addEventListener('click', () => {
-                updateHeroContent(index);
-                startAutoplay();
-            });
-        });
-        
-        if (heroCards.length > 1) {
-             startAutoplay();
-        }
-        if(heroBackground) {
-            heroBackground.style.transition = 'opacity 0.3s ease-in-out';
+    // بررسی اینکه آیا کاربر لاگین کرده، این پروفایل را دنبال می‌کند یا نه
+    $is_following = false;
+    if ($is_logged_in) {
+        $stmt_follow_check = $conn->prepare("SELECT id FROM followers WHERE follower_id = ? AND following_id = ?");
+        $stmt_follow_check->execute([$user_id, $profile_user_id]);
+        if ($stmt_follow_check->fetch()) {
+            $is_following = true;
         }
     }
-});
-</script>
 
-<?php 
-require_once 'footer.php'; 
+    // واکشی استوری‌های فعال این کاربر
+    $stmt_stories = $conn->prepare(
+        "SELECT s.id as story_id, n.id as novel_id, n.cover_url 
+         FROM novel_stories s 
+         JOIN novels n ON s.novel_id = n.id 
+         WHERE s.user_id = ? AND s.expires_at > NOW() 
+         ORDER BY s.created_at DESC LIMIT 10"
+    );
+    $stmt_stories->execute([$profile_user_id]);
+    $stories = $stmt_stories->fetchAll();
+
+    // واکشی آثار (ناول‌های) منتشر شده توسط این کاربر
+    $stmt_novels = $conn->prepare("SELECT id, title, cover_url, rating, type FROM novels WHERE author_id = ? ORDER BY created_at DESC");
+    $stmt_novels->execute([$profile_user_id]);
+    $user_novels = $stmt_novels->fetchAll();
+
+    // واکشی لیست آثار کاربر برای مودال "ایجاد استوری" (فقط اگر خودش پروفایل را می‌بیند)
+    $user_novels_for_story = [];
+    if ($is_logged_in && $user_id == $profile_user_id) {
+        $stmt_story_novels = $conn->prepare("SELECT id, title FROM novels WHERE author_id = ? ORDER BY title ASC");
+        $stmt_story_novels->execute([$user_id]);
+        $user_novels_for_story = $stmt_story_novels->fetchAll();
+    }
+
+} catch (PDOException $e) {
+    error_log("Public Profile Error: " . $e->getMessage());
+    die("خطا در بارگذاری اطلاعات پروفایل. لطفاً بعداً تلاش کنید.");
+}
 ?>
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پروفایل <?php echo htmlspecialchars($profile_user['username']); ?> - NovelWorld</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="header-style.css">
+    <link rel="stylesheet" href="public_profile_style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+</head>
+<body>
+    <?php require_once 'header.php'; ?>
+
+    <!-- 
+        *** نکته کلیدی برای حل مشکل: ***
+        ما شناسه کاربر پروفایل را در یک data attribute ذخیره می‌کنیم
+        تا جاوااسکریپت بتواند آن را بخواند و برای بارگذاری پست‌ها استفاده کند.
+    -->
+    <main class="profile-page-container" data-profile-userid="<?php echo $profile_user_id; ?>">
+        <header class="profile-main-header">
+            <div class="header-banner" style="background-image: url('<?php echo htmlspecialchars($profile_user['header_image_url'] ?? 'assets/default_header.jpg'); ?>');"></div>
+            <div class="header-content">
+                <div class="profile-picture">
+                    <img src="<?php echo htmlspecialchars($profile_user['profile_picture_url'] ?? 'assets/default_avatar.png'); ?>" alt="پروفایل <?php echo htmlspecialchars($profile_user['username']); ?>">
+                </div>
+                <div class="profile-details">
+                    <div class="title-and-actions">
+                        <h2><?php echo htmlspecialchars($profile_user['username']); ?></h2>
+                        <div class="action-buttons">
+                            <?php if ($is_logged_in && $user_id == $profile_user_id): // اگر کاربر مالک پروفایل است ?>
+                                <div class="profile-actions-menu">
+                                    <button id="profile-actions-toggle" class="btn btn-secondary" aria-label="گزینه‌ها">
+                                        <span class="material-symbols-outlined">more_horiz</span>
+                                    </button>
+                                    <div id="profile-actions-dropdown" class="profile-actions-dropdown">
+                                        <a href="#" id="create-story-link"><span class="material-symbols-outlined">add_circle</span> استوری ناول جدید</a>
+                                        <a href="edit_profile.php"><span class="material-symbols-outlined">edit</span> ویرایش پروفایل</a>
+                                        <a href="library.php"><span class="material-symbols-outlined">collections_bookmark</span> کتابخانه من</a>
+                                    </div>
+                                </div>
+                            <?php elseif ($is_logged_in): // اگر کاربر لاگین کرده ولی مالک نیست ?>
+                                <button id="follow-toggle-btn" class="btn <?php echo $is_following ? 'btn-secondary' : 'btn-primary'; ?>" data-profile-id="<?php echo $profile_user_id; ?>">
+                                    <?php echo $is_following ? 'لغو دنبال' : 'دنبال کردن'; ?>
+                                </button>
+                            <?php else: // اگر کاربر مهمان است ?>
+                                <a href="login.php" class="btn btn-primary">دنبال کردن</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="profile-stats">
+                        <div class="stat"><strong><?php echo $works_count; ?></strong> اثر</div>
+                        <div class="stat"><strong><?php echo $followers_count; ?></strong> دنبال‌کننده</div>
+                        <div class="stat"><strong><?php echo $following_count; ?></strong> دنبال‌شونده</div>
+                    </div>
+                    <div class="profile-bio">
+                        <p><?php echo nl2br(htmlspecialchars($profile_user['bio'] ?? 'بیوگرافی ثبت نشده است.')); ?></p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <?php if (!empty($stories)): ?>
+            <section class="story-section">
+                <div class="story-carousel">
+                    <?php foreach ($stories as $story): ?>
+                        <a href="story_viewer.php?id=<?php echo $story['story_id']; ?>" class="story-circle">
+                            <img src="<?php echo htmlspecialchars($story['cover_url']); ?>" alt="استوری">
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </section>
+        <?php endif; ?>
+
+        <section class="profile-content-tabs">
+            <div class="tab-links">
+                <button class="tab-link active" data-tab="novels-tab"><span class="material-symbols-outlined">auto_stories</span>آثار</button>
+                <button class="tab-link" data-tab="posts-tab"><span class="material-symbols-outlined">article</span>پست‌ها</button>
+                <?php if (!empty($profile_user['donation_link'])): ?>
+                    <a href="<?php echo htmlspecialchars($profile_user['donation_link']); ?>" target="_blank" rel="noopener noreferrer" class="tab-link donate-link"><span class="material-symbols-outlined">volunteer_activism</span>حمایت مالی</a>
+                <?php endif; ?>
+            </div>
+            <div class="tab-content-container">
+                <div id="novels-tab" class="tab-content active">
+                    <div class="works-grid">
+                        <?php if (empty($user_novels)): ?>
+                            <p class="empty-tab-message">این کاربر هنوز اثری منتشر نکرده است.</p>
+                        <?php else: ?>
+                            <?php foreach ($user_novels as $novel): ?>
+                                <a href="novel_detail.php?id=<?php echo $novel['id']; ?>" class="work-card">
+                                    <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>">
+                                    <div class="work-card-overlay">
+                                        <h3><?php echo htmlspecialchars($novel['title']); ?></h3>
+                                        <span class="rating">★ <?php echo htmlspecialchars($novel['rating']); ?></span>
+                                    </div>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div id="posts-tab" class="tab-content">
+                    <?php if ($is_logged_in && $user_id == $profile_user_id): ?>
+                        <div class="create-post-box">
+                            <h3>یک پست جدید ایجاد کنید</h3>
+                            <form id="create-post-form">
+                                <textarea name="content" placeholder="به چه چیزی فکر می‌کنید، <?php echo htmlspecialchars($username); ?>؟" rows="4" required></textarea>
+                                <div id="post-image-preview" class="image-preview-container"></div>
+                                <div class="form-footer">
+                                    <label for="post-image-input" class="image-upload-label">
+                                        <span class="material-symbols-outlined">add_photo_alternate</span> افزودن تصویر
+                                    </label>
+                                    <input type="file" id="post-image-input" name="post_image" accept="image/*" style="display:none;">
+                                    <button type="submit" class="btn btn-primary">انتشار پست</button>
+                                </div>
+                            </form>
+                        </div>
+                    <?php endif; ?>
+                    <div id="posts-container">
+                        <p class="empty-tab-message">برای مشاهده پست‌ها، روی تب کلیک کنید.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <?php if ($is_logged_in && $user_id == $profile_user_id): ?>
+        <div id="create-story-modal" class="action-modal-overlay">
+            <div class="action-modal-content">
+                <div class="modal-header">
+                    <h3>افزودن ناول به استوری</h3>
+                    <button class="close-modal-btn">&times;</button>
+                </div>
+                <form id="create-story-form">
+                    <?php if (empty($user_novels_for_story)): ?>
+                        <p style="text-align: center; color: var(--text-secondary-color); padding: 20px;">شما برای ایجاد استوری، ابتدا باید یک اثر منتشر کنید.</p>
+                    <?php else: ?>
+                        <div class="form-group">
+                            <label for="story-novel-select">کدام اثر را می‌خواهید پروموت کنید؟</label>
+                            <select id="story-novel-select" name="novel_id" required>
+                                <option value="" disabled selected>یک اثر را انتخاب کنید...</option>
+                                <?php foreach ($user_novels_for_story as $novel): ?>
+                                    <option value="<?php echo $novel['id']; ?>"><?php echo htmlspecialchars($novel['title']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="story-title-input">عنوان استوری (اختیاری)</label>
+                            <input type="text" id="story-title-input" name="title" placeholder="مثلاً: چپتر جدید در راه است!">
+                        </div>
+                        <div class="modal-form-footer">
+                            <button type="submit" class="btn btn-primary">افزودن به استوری (۲۴ ساعت)</button>
+                        </div>
+                    <?php endif; ?>
+                </form>
+            </div>
+        </div>
+    <?php endif; ?>
+    
+    <script src="public_profile_script.js"></script>
+
+    <?php require_once 'footer.php'; ?>
+</body>
+</html>
