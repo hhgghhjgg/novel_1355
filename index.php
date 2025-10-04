@@ -1,12 +1,12 @@
 <?php
 /*
 =====================================================
-    NovelWorld - Main Index Page
-    Version: 2.7 (Final, Corrected Icons & Links)
+    NovelWorld - Main Index Page (FINAL & COMPLETE)
+    Version: 3.1 (With all new carousels)
 =====================================================
-    - این نسخه شامل آیکون اصلاح شده 'edit' برای بخش ناول‌های ایرانی است.
-    - لینک اسلایدر "آخرین چپترها" به صفحه جزئیات ناول اشاره می‌کند.
-    - اسکریپت هیرو اسلایدر برای اسلاید خودکار بهبود یافته است.
+    - This is the final, complete code for the redesigned homepage.
+    - Includes all requested carousels: Latest Updates, Newest Arrivals,
+      Completed Works, Highest Rated, Top Originals, and Top Translated.
 */
 
 // --- گام ۱: فراخوانی هدر و اتصال به دیتابیس ---
@@ -14,132 +14,137 @@ require_once 'header.php';
 
 // --- گام ۲: واکشی داده‌ها برای تمام بخش‌ها ---
 $hero_slides = [];
-$latest_chapters = [];
-$newest_originals = [];
+$latest_updates = [];
+$top_originals = [];
 $top_translated = [];
+// تعریف متغیرها برای اسلایدرهای جدید
+$newest_arrivals = [];
+$completed_works = [];
+$highest_rated = [];
 
 try {
-    // ۱. اسلایدر اصلی (۵ اثر برتر)
-    $hero_slides = $conn->query("SELECT id, title, summary, cover_url FROM novels ORDER BY rating DESC, created_at DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+    // تابع کمکی برای افزودن شماره آخرین چپتر به لیست ناول‌ها
+    function enrich_novels_with_latest_chapter($conn, $novels_array) {
+        if (empty($novels_array)) return [];
+        
+        $novel_ids = array_column($novels_array, 'id');
+        $placeholders = implode(',', array_fill(0, count($novel_ids), '?'));
+        
+        $sql = "SELECT novel_id, MAX(chapter_number) as latest_chapter 
+                FROM chapters 
+                WHERE novel_id IN ($placeholders) AND status = 'approved'
+                GROUP BY novel_id";
+        
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($novel_ids);
+        $chapters_data = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-    // ۲. آخرین چپترهای منتشر شده
-    $latest_chapters_stmt = $conn->query(
-        "SELECT c.id, c.chapter_number, c.title as chapter_title, 
-                n.id as novel_id, n.title as novel_title, n.cover_url
-         FROM chapters c
-         JOIN novels n ON c.novel_id = n.id
-         WHERE c.status = 'approved' AND c.published_at <= NOW()
-         ORDER BY c.published_at DESC 
-         LIMIT 10"
+        foreach ($novels_array as &$novel) {
+            $novel['latest_chapter'] = $chapters_data[$novel['id']] ?? 0;
+        }
+        return $novels_array;
+    }
+
+    // ۱. اسلایدر اصلی (۵ اثر جدید و پرطرفدار)
+    $hero_slides = $conn->query("SELECT id, title, summary, cover_url, author FROM novels ORDER BY created_at DESC, rating DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
+
+    // ۲. جدیدترین بروزرسانی‌ها (آثاری که به تازگی چپتر جدید دریافت کرده‌اند)
+    $latest_updates_stmt = $conn->query(
+        "SELECT n.id, n.title, n.cover_url, n.rating, n.type
+         FROM novels n
+         JOIN (
+             SELECT novel_id, MAX(published_at) as last_published
+             FROM chapters
+             WHERE status = 'approved' AND published_at <= NOW()
+             GROUP BY novel_id
+         ) as latest_chapters ON n.id = latest_chapters.novel_id
+         ORDER BY latest_chapters.last_published DESC
+         LIMIT 12"
     );
-    $latest_chapters = $latest_chapters_stmt->fetchAll(PDO::FETCH_ASSOC);
+    $latest_updates = $latest_updates_stmt->fetchAll(PDO::FETCH_ASSOC);
+    $latest_updates = enrich_novels_with_latest_chapter($conn, $latest_updates);
 
-    // ۳. ناول‌های ایرانی (تالیفی)
-    $newest_originals = $conn->query("SELECT id, title, cover_url, rating FROM novels WHERE origin = 'original' ORDER BY created_at DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+    // ۳. برترین آثار تالیفی (ایرانی)
+    $top_originals = $conn->query("SELECT id, title, cover_url, rating, type FROM novels WHERE origin = 'original' ORDER BY rating DESC, created_at DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
+    $top_originals = enrich_novels_with_latest_chapter($conn, $top_originals);
     
-    // ۴. آثار ترجمه شده
-    $top_translated = $conn->query("SELECT id, title, cover_url, rating FROM novels WHERE origin = 'translated' ORDER BY rating DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+    // ۴. برترین آثار ترجمه شده
+    $top_translated = $conn->query("SELECT id, title, cover_url, rating, type FROM novels WHERE origin = 'translated' ORDER BY rating DESC, created_at DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
+    $top_translated = enrich_novels_with_latest_chapter($conn, $top_translated);
+
+    // --- واکشی اطلاعات برای اسلایدرهای جدید ---
+    // ۵. آثار تازه اضافه شده
+    $newest_arrivals = $conn->query("SELECT id, title, cover_url, rating, type FROM novels ORDER BY created_at DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
+    $newest_arrivals = enrich_novels_with_latest_chapter($conn, $newest_arrivals);
+
+    // ۶. آثار تکمیل شده (مرتب شده بر اساس امتیاز)
+    $completed_works = $conn->query("SELECT id, title, cover_url, rating, type FROM novels WHERE status = 'completed' ORDER BY rating DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
+    $completed_works = enrich_novels_with_latest_chapter($conn, $completed_works);
+
+    // ۷. آثار با بالاترین امتیاز
+    $highest_rated = $conn->query("SELECT id, title, cover_url, rating, type FROM novels ORDER BY rating DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
+    $highest_rated = enrich_novels_with_latest_chapter($conn, $highest_rated);
+
 
 } catch (PDOException $e) {
     error_log("Index Page Fetch Error: " . $e->getMessage());
 }
 
-// --- گام ۳: تعریف آرایه ژانرها برای نمایش ---
-$all_genres = [
-    ['name' => 'اکشن', 'icon' => 'bolt'], ['name' => 'فانتزی', 'icon' => 'auto_stories'],
-    ['name' => 'عاشقانه', 'icon' => 'favorite'], ['name' => 'ماجراجویی', 'icon' => 'explore'],
-    ['name' => 'کمدی', 'icon' => 'sentiment_satisfied'], ['name' => 'درام', 'icon' => 'theater_comedy'],
-    ['name' => 'ایسکای', 'icon' => 'public'], ['name' => 'تناسخ', 'icon' => 'history_toggle_off'],
-    ['name' => 'هنرهای رزمی', 'icon' => 'sports_martial_arts'], ['name' => 'معمایی', 'icon' => 'search'],
-    ['name' => 'ترسناک', 'icon' => 'mood_bad'], ['name' => 'مدرسه‌ای', 'icon' => 'school'],
-];
-$top_genres = array_slice($all_genres, 0, 10);
+$type_persian = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => 'مانگا'];
 ?>
 
-<main>
-    <!-- ۱. هیرو اسلایدر سینمایی -->
-    <section class="cinematic-hero">
-        <?php if (!empty($hero_slides)): $first_slide = $hero_slides[0]; ?>
-            <div class="hero-background" style="background-image: url('<?php echo htmlspecialchars($first_slide['cover_url']); ?>');"></div>
-            <div class="hero-overlay"></div>
-            <div class="hero-content">
-                <div class="hero-text">
-                    <h1 id="hero-title"><?php echo htmlspecialchars($first_slide['title']); ?></h1>
-                    <p id="hero-summary"><?php echo htmlspecialchars(mb_substr(trim($first_slide['summary']), 0, 150, "UTF-8")) . '...'; ?></p>
-                    <a id="hero-link" href="novel_detail.php?id=<?php echo $first_slide['id']; ?>" class="btn btn-primary">مشاهده جزئیات</a>
-                </div>
-                <div class="hero-carousel">
-                    <?php foreach ($hero_slides as $index => $slide): ?>
-                        <div class="hero-card <?php echo $index === 0 ? 'active' : ''; ?>" 
-                             data-title="<?php echo htmlspecialchars($slide['title']); ?>"
-                             data-summary="<?php echo htmlspecialchars(mb_substr(trim($slide['summary']), 0, 150, "UTF-8")) . '...'; ?>"
-                             data-link="novel_detail.php?id=<?php echo $slide['id']; ?>"
-                             data-bg="<?php echo htmlspecialchars($slide['cover_url']); ?>">
-                            <img src="<?php echo htmlspecialchars($slide['cover_url']); ?>" alt="<?php echo htmlspecialchars($slide['title']); ?>">
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        <?php endif; ?>
-    </section>
-
-    <!-- ۲. اسلایدر ژانرها (افقی) -->
-    <section class="content-section">
-        <div class="section-header">
-            <h2 class="section-title"><span class="material-symbols-outlined">category</span>مرور ژانرها</h2>
-            <a href="all_genres.php" class="view-all">همه ژانرها</a>
-        </div>
-        <div class="genre-carousel">
-            <?php foreach ($top_genres as $genre): ?>
-                <a href="genre_results.php?genre=<?php echo urlencode($genre['name']); ?>" class="genre-card">
-                    <span class="material-symbols-outlined genre-icon"><?php echo $genre['icon']; ?></span>
-                    <span class="genre-name"><?php echo htmlspecialchars($genre['name']); ?></span>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    </section>
-    
-    <!-- ۳. اسلایدر آخرین چپترها -->
-    <?php if (!empty($latest_chapters)): ?>
-    <section class="content-section">
-        <div class="section-header">
-            <h2 class="section-title"><span class="material-symbols-outlined">history</span>آخرین چپترهای منتشر شده</h2>
-        </div>
-        <div class="latest-chapters-carousel">
-            <?php foreach ($latest_chapters as $chapter): 
-                $optimized_cover = str_replace("/upload/", "/upload/c_fill,h_300,w_500,q_auto,f_auto/", $chapter['cover_url']);
-            ?>
-                <a href="novel_detail.php?id=<?php echo $chapter['novel_id']; ?>" class="chapter-card">
-                    <img src="<?php echo htmlspecialchars($optimized_cover); ?>" alt="<?php echo htmlspecialchars($chapter['novel_title']); ?>" class="chapter-card-img">
-                    <div class="chapter-card-overlay">
-                        <h4 class="chapter-card-novel-title"><?php echo htmlspecialchars($chapter['novel_title']); ?></h4>
-                        <p class="chapter-card-title">چپتر <?php echo htmlspecialchars($chapter['chapter_number']); ?></p>
+<main class="homepage-main">
+    <!-- بخش ۱: هیرو اسلایدر -->
+    <?php if (!empty($hero_slides)): ?>
+    <section class="hero-slider-section">
+        <div class="hero-slider">
+            <?php foreach ($hero_slides as $slide): ?>
+                <div class="hero-slide" data-id="<?php echo $slide['id']; ?>">
+                    <div class="hero-slide-bg" style="background-image: url('<?php echo htmlspecialchars($slide['cover_url']); ?>');"></div>
+                    <div class="hero-slide-overlay"></div>
+                    <div class="hero-slide-content">
+                        <h1 class="hero-title"><?php echo htmlspecialchars($slide['title']); ?></h1>
+                        <p class="hero-author">اثر <?php echo htmlspecialchars($slide['author']); ?></p>
+                        <p class="hero-summary"><?php echo htmlspecialchars(mb_substr(trim($slide['summary']), 0, 120, "UTF-8")) . '...'; ?></p>
+                        <a href="novel_detail.php?id=<?php echo $slide['id']; ?>" class="btn btn-primary hero-btn">
+                            <span class="material-symbols-outlined">auto_stories</span> شروع خواندن
+                        </a>
                     </div>
-                </a>
+                </div>
             <?php endforeach; ?>
         </div>
+        <div class="hero-slider-dots"></div>
     </section>
     <?php endif; ?>
 
-    <!-- ۴. اسلایدر ناول ایرانی (تالیفی) -->
-    <?php if (!empty($newest_originals)): ?>
+
+    <!-- بخش ۲: جدیدترین بروزرسانی‌ها -->
+    <?php if (!empty($latest_updates)): ?>
     <section class="content-section">
         <div class="section-header">
-            <!-- *** آیکون pen_spark به edit تغییر کرد *** -->
-            <h2 class="section-title"><span class="material-symbols-outlined">edit</span>ناول‌های ایرانی</h2>
-            <a href="search.php?origin=original" class="view-all">مشاهده همه</a>
+            <h2 class="section-title">جدیدترین بروزرسانی‌ها</h2>
+            <div class="carousel-nav">
+                <button class="nav-arrow prev-arrow" data-carousel="latest-carousel">&lt;</button>
+                <button class="nav-arrow next-arrow" data-carousel="latest-carousel">&gt;</button>
+            </div>
         </div>
-        <div class="manhwa-carousel">
-            <?php foreach ($newest_originals as $novel): 
-                $optimized_cover = str_replace("/upload/", "/upload/c_fill,h_480,w_320,q_auto,f_auto/", $novel['cover_url']);
-            ?>
-                <div class="manhwa-card">
+        <div class="works-carousel" id="latest-carousel">
+            <?php foreach ($latest_updates as $novel): ?>
+                <div class="work-card">
                     <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
-                        <div class="card-image-container">
-                            <img src="<?php echo htmlspecialchars($optimized_cover); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img">
-                            <div class="card-badges"><span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span></div>
+                        <div class="card-image-wrapper">
+                            <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img" loading="lazy">
+                            <div class="card-overlay-gradient"></div>
+                            <div class="card-top-badges">
+                                <span class="badge type-badge"><?php echo $type_persian[$novel['type']]; ?></span>
+                            </div>
+                            <div class="card-bottom-info">
+                                <h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
+                                <?php if ($novel['latest_chapter'] > 0): ?>
+                                    <span class="card-chapter">چپتر <?php echo htmlspecialchars($novel['latest_chapter']); ?></span>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div class="card-content"><h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3></div>
                     </a>
                 </div>
             <?php endforeach; ?>
@@ -147,86 +152,253 @@ $top_genres = array_slice($all_genres, 0, 10);
     </section>
     <?php endif; ?>
 
-    <!-- ۵. اسلایدر آثار ترجمه شده -->
+    <!-- ============================================= -->
+    <!--          شروع اسلایدرهای جدید شما            -->
+    <!-- ============================================= -->
+
+    <!-- بخش جدید ۱: تازه به NovelWorld اضافه شدند -->
+    <?php if (!empty($newest_arrivals)): ?>
+    <section class="content-section">
+        <div class="section-header">
+            <h2 class="section-title">تازه به NovelWorld اضافه شدند</h2>
+            <div class="carousel-nav">
+                <button class="nav-arrow prev-arrow" data-carousel="newest-carousel">&lt;</button>
+                <button class="nav-arrow next-arrow" data-carousel="newest-carousel">&gt;</button>
+            </div>
+        </div>
+        <div class="works-carousel" id="newest-carousel">
+            <?php foreach ($newest_arrivals as $novel): ?>
+                <div class="work-card">
+                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
+                        <div class="card-image-wrapper">
+                            <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img" loading="lazy">
+                            <div class="card-overlay-gradient"></div>
+                            <div class="card-top-badges">
+                                <span class="badge type-badge"><?php echo $type_persian[$novel['type']]; ?></span>
+                            </div>
+                            <div class="card-bottom-info">
+                                <h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
+                                <?php if ($novel['latest_chapter'] > 0): ?>
+                                    <span class="card-chapter">چپتر <?php echo htmlspecialchars($novel['latest_chapter']); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
+
+
+    <!-- بخش جدید ۲: آثار تکمیل شده -->
+    <?php if (!empty($completed_works)): ?>
+    <section class="content-section">
+        <div class="section-header">
+            <h2 class="section-title">پیشنهاد آثار تکمیل شده</h2>
+            <div class="carousel-nav">
+                <button class="nav-arrow prev-arrow" data-carousel="completed-carousel">&lt;</button>
+                <button class="nav-arrow next-arrow" data-carousel="completed-carousel">&gt;</button>
+            </div>
+        </div>
+        <div class="works-carousel" id="completed-carousel">
+            <?php foreach ($completed_works as $novel): ?>
+                 <div class="work-card">
+                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
+                        <div class="card-image-wrapper">
+                            <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img" loading="lazy">
+                            <div class="card-overlay-gradient"></div>
+                            <div class="card-top-badges">
+                                <span class="badge type-badge"><?php echo $type_persian[$novel['type']]; ?></span>
+                                <span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span>
+                            </div>
+                            <div class="card-bottom-info">
+                                <h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
+                                <?php if ($novel['latest_chapter'] > 0): ?>
+                                    <span class="card-chapter">چپتر <?php echo htmlspecialchars($novel['latest_chapter']); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
+    
+    <!-- بخش جدید ۳: امتیازآورترین‌ها -->
+    <?php if (!empty($highest_rated)): ?>
+    <section class="content-section">
+        <div class="section-header">
+            <h2 class="section-title">امتیازآورترین‌ها</h2>
+            <div class="carousel-nav">
+                <button class="nav-arrow prev-arrow" data-carousel="rated-carousel">&lt;</button>
+                <button class="nav-arrow next-arrow" data-carousel="rated-carousel">&gt;</button>
+            </div>
+        </div>
+        <div class="works-carousel" id="rated-carousel">
+            <?php foreach ($highest_rated as $novel): ?>
+                <div class="work-card">
+                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
+                        <div class="card-image-wrapper">
+                            <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img" loading="lazy">
+                            <div class="card-overlay-gradient"></div>
+                            <div class="card-top-badges">
+                                <span class="badge type-badge"><?php echo $type_persian[$novel['type']]; ?></span>
+                                <span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span>
+                            </div>
+                            <div class="card-bottom-info">
+                                <h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
+                                <?php if ($novel['latest_chapter'] > 0): ?>
+                                    <span class="card-chapter">چپتر <?php echo htmlspecialchars($novel['latest_chapter']); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <!-- ============================================= -->
+    <!--           پایان اسلایدرهای جدید              -->
+    <!-- ============================================= -->
+
+
+    <!-- بخش: برترین آثار تالیفی -->
+    <?php if (!empty($top_originals)): ?>
+    <section class="content-section">
+        <div class="section-header">
+            <h2 class="section-title">برترین آثار ایرانی</h2>
+            <div class="carousel-nav">
+                <button class="nav-arrow prev-arrow" data-carousel="originals-carousel">&lt;</button>
+                <button class="nav-arrow next-arrow" data-carousel="originals-carousel">&gt;</button>
+            </div>
+        </div>
+        <div class="works-carousel" id="originals-carousel">
+            <?php foreach ($top_originals as $novel): ?>
+                 <div class="work-card">
+                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
+                        <div class="card-image-wrapper">
+                            <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img" loading="lazy">
+                            <div class="card-overlay-gradient"></div>
+                            <div class="card-top-badges">
+                                <span class="badge type-badge"><?php echo $type_persian[$novel['type']]; ?></span>
+                                <span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span>
+                            </div>
+                            <div class="card-bottom-info">
+                                <h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
+                                <?php if ($novel['latest_chapter'] > 0): ?>
+                                    <span class="card-chapter">چپتر <?php echo htmlspecialchars($novel['latest_chapter']); ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
+    
+    <!-- بخش: برترین آثار ترجمه -->
     <?php if (!empty($top_translated)): ?>
     <section class="content-section">
         <div class="section-header">
-            <h2 class="section-title"><span class="material-symbols-outlined">translate</span>برترین‌های ترجمه</h2>
-            <a href="search.php?origin=translated" class="view-all">مشاهده همه</a>
+            <h2 class="section-title">محبوب‌ترین‌های ترجمه</h2>
+            <div class="carousel-nav">
+                <button class="nav-arrow prev-arrow" data-carousel="translated-carousel">&lt;</button>
+                <button class="nav-arrow next-arrow" data-carousel="translated-carousel">&gt;</button>
+            </div>
         </div>
-        <div class="manhwa-carousel">
-            <?php foreach ($top_translated as $novel): 
-                $optimized_cover = str_replace("/upload/", "/upload/c_fill,h_480,w_320,q_auto,f_auto/", $novel['cover_url']);
-            ?>
-                <div class="manhwa-card">
+        <div class="works-carousel" id="translated-carousel">
+            <?php foreach ($top_translated as $novel): ?>
+                <div class="work-card">
                     <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
-                        <div class="card-image-container">
-                            <img src="<?php echo htmlspecialchars($optimized_cover); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img">
-                            <div class="card-badges"><span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span></div>
+                        <div class="card-image-wrapper">
+                            <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img" loading="lazy">
+                            <div class="card-overlay-gradient"></div>
+                            <div class="card-top-badges">
+                                <span class="badge type-badge"><?php echo $type_persian[$novel['type']]; ?></span>
+                                <span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span>
+                            </div>
+                            <div class="card-bottom-info">
+                                <h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
+                                <?php if ($novel['latest_chapter'] > 0): ?>
+                                    <span class="card-chapter">چپتر <?php echo htmlspecialchars($novel['latest_chapter']); ?></span>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div class="card-content"><h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3></div>
                     </a>
                 </div>
             <?php endforeach; ?>
         </div>
     </section>
     <?php endif; ?>
+
 </main>
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const heroCarousel = document.querySelector('.hero-carousel');
-    if (heroCarousel) {
-        const heroCards = heroCarousel.querySelectorAll('.hero-card');
-        const heroTitle = document.getElementById('hero-title');
-        const heroSummary = document.getElementById('hero-summary');
-        const heroLink = document.getElementById('hero-link');
-        const heroBackground = document.querySelector('.hero-background');
-        let currentIndex = 0;
-        let slideInterval;
+    // --- Hero Slider Logic ---
+    const heroSlider = document.querySelector('.hero-slider');
+    if (heroSlider) {
+        const slides = heroSlider.querySelectorAll('.hero-slide');
+        const dotsContainer = document.querySelector('.hero-slider-dots');
+        if (slides.length > 1) {
+            let currentIndex = 0;
+            let slideInterval;
 
-        function updateHeroContent(index) {
-            const card = heroCards[index];
-            if (!card) return;
-            if (heroTitle) heroTitle.textContent = card.dataset.title;
-            if (heroSummary) heroSummary.textContent = card.dataset.summary;
-            if (heroLink) heroLink.href = card.dataset.link;
-            if (heroBackground) {
-                heroBackground.style.opacity = 0;
-                setTimeout(() => {
-                    heroBackground.style.backgroundImage = `url('${card.dataset.bg}')`;
-                    heroBackground.style.opacity = 1;
-                }, 300);
-            }
-            heroCarousel.querySelector('.hero-card.active')?.classList.remove('active');
-            card.classList.add('active');
-            currentIndex = index;
-        }
-
-        function nextSlide() {
-            const nextIndex = (currentIndex + 1) % heroCards.length;
-            updateHeroContent(nextIndex);
-        }
-
-        function startAutoplay() {
-            clearInterval(slideInterval);
-            slideInterval = setInterval(nextSlide, 5000);
-        }
-
-        heroCards.forEach((card, index) => {
-            card.addEventListener('click', () => {
-                updateHeroContent(index);
-                startAutoplay();
+            slides.forEach((_, index) => {
+                const dot = document.createElement('button');
+                dot.classList.add('hero-dot');
+                if (index === 0) dot.classList.add('active');
+                dot.addEventListener('click', () => {
+                    goToSlide(index);
+                    resetInterval();
+                });
+                dotsContainer.appendChild(dot);
             });
-        });
-        
-        if (heroCards.length > 1) {
-             startAutoplay();
-        }
-        if(heroBackground) {
-            heroBackground.style.transition = 'opacity 0.3s ease-in-out';
+            const dots = dotsContainer.querySelectorAll('.hero-dot');
+
+            function goToSlide(index) {
+                heroSlider.style.transform = `translateX(-${index * 100}%)`;
+                dots.forEach(dot => dot.classList.remove('active'));
+                dots[index].classList.add('active');
+                currentIndex = index;
+            }
+
+            function nextSlide() {
+                const nextIndex = (currentIndex + 1) % slides.length;
+                goToSlide(nextIndex);
+            }
+            
+            function resetInterval() {
+                clearInterval(slideInterval);
+                slideInterval = setInterval(nextSlide, 7000); // 7 seconds
+            }
+
+            resetInterval();
         }
     }
+
+    // --- Carousels Navigation Logic ---
+    const carousels = document.querySelectorAll('.works-carousel');
+    carousels.forEach(carousel => {
+        const prevBtn = document.querySelector(`.prev-arrow[data-carousel="${carousel.id}"]`);
+        const nextBtn = document.querySelector(`.next-arrow[data-carousel="${carousel.id}"]`);
+        
+        if (prevBtn && nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                const scrollAmount = carousel.clientWidth * 0.8;
+                carousel.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            });
+            prevBtn.addEventListener('click', () => {
+                const scrollAmount = carousel.clientWidth * 0.8;
+                carousel.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+            });
+        }
+    });
 });
 </script>
 
