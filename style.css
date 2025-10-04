@@ -330,3 +330,48 @@ body {
         font-size: 0.9rem; 
     }
 }
+/* --- استایل اسلایدر ژانرها --- */
+.genre-carousel {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding-bottom: 15px;
+    scrollbar-width: none; /* For Firefox */
+}
+
+.genre-carousel::-webkit-scrollbar {
+    display: none; /* For Chrome, Safari, etc. */
+}
+
+.genre-card {
+    flex: 0 0 130px; /* عرض ثابت برای هر کارت */
+    height: 100px; /* ارتفاع ثابت */
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    color: var(--text-secondary-color);
+    transition: all 0.2s ease-in-out;
+}
+
+.genre-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary-color);
+    color: var(--text-color);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.genre-icon {
+    font-size: 36px;
+    color: var(--primary-color);
+}
+
+.genre-name {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    }
