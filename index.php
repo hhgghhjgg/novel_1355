@@ -2,10 +2,12 @@
 /*
 =====================================================
     NovelWorld - Main Index Page (FINAL & COMPLETE)
-    Version: 3.1 (With all new carousels)
+    Version: 3.2 (With Genre Carousel Restored)
 =====================================================
     - This is the final, complete code for the redesigned homepage.
-    - Includes all requested carousels: Latest Updates, Newest Arrivals,
+    - Includes the cinematic Hero Slider.
+    - Includes the restored Genre Carousel.
+    - Includes all 6 work carousels: Latest Updates, Newest Arrivals,
       Completed Works, Highest Rated, Top Originals, and Top Translated.
 */
 
@@ -72,7 +74,6 @@ try {
     $top_translated = $conn->query("SELECT id, title, cover_url, rating, type FROM novels WHERE origin = 'translated' ORDER BY rating DESC, created_at DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     $top_translated = enrich_novels_with_latest_chapter($conn, $top_translated);
 
-    // --- واکشی اطلاعات برای اسلایدرهای جدید ---
     // ۵. آثار تازه اضافه شده
     $newest_arrivals = $conn->query("SELECT id, title, cover_url, rating, type FROM novels ORDER BY created_at DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     $newest_arrivals = enrich_novels_with_latest_chapter($conn, $newest_arrivals);
@@ -90,7 +91,19 @@ try {
     error_log("Index Page Fetch Error: " . $e->getMessage());
 }
 
+// آرایه کمکی برای تبدیل نوع اثر به نام فارسی
 $type_persian = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => 'مانگا'];
+
+// تعریف آرایه ژانرها برای نمایش
+$all_genres = [
+    ['name' => 'اکشن', 'icon' => 'bolt'], ['name' => 'فانتزی', 'icon' => 'auto_stories'],
+    ['name' => 'عاشقانه', 'icon' => 'favorite'], ['name' => 'ماجراجویی', 'icon' => 'explore'],
+    ['name' => 'کمدی', 'icon' => 'sentiment_satisfied'], ['name' => 'درام', 'icon' => 'theater_comedy'],
+    ['name' => 'ایسکای', 'icon' => 'public'], ['name' => 'تناسخ', 'icon' => 'history_toggle_off'],
+    ['name' => 'هنرهای رزمی', 'icon' => 'sports_martial_arts'], ['name' => 'معمایی', 'icon' => 'search'],
+    ['name' => 'ترسناک', 'icon' => 'mood_bad'], ['name' => 'مدرسه‌ای', 'icon' => 'school'],
+];
+$top_genres = array_slice($all_genres, 0, 10);
 ?>
 
 <main class="homepage-main">
@@ -116,9 +129,27 @@ $type_persian = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => '
         <div class="hero-slider-dots"></div>
     </section>
     <?php endif; ?>
+    
+    <!-- بخش ۲: اسلایدر ژانرها (بازگردانده شده) -->
+    <?php if (!empty($top_genres)): ?>
+    <section class="content-section">
+        <div class="section-header">
+            <h2 class="section-title">مرور ژانرها</h2>
+            <a href="all_genres.php" class="view-all" style="font-weight: 500; color: var(--text-secondary-color);">مشاهده همه</a>
+        </div>
+        <div class="genre-carousel">
+            <?php foreach ($top_genres as $genre): ?>
+                <a href="genre_results.php?genre=<?php echo urlencode($genre['name']); ?>" class="genre-card">
+                    <span class="material-symbols-outlined genre-icon"><?php echo $genre['icon']; ?></span>
+                    <span class="genre-name"><?php echo htmlspecialchars($genre['name']); ?></span>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    </section>
+    <?php endif; ?>
 
 
-    <!-- بخش ۲: جدیدترین بروزرسانی‌ها -->
+    <!-- بخش ۳: جدیدترین بروزرسانی‌ها -->
     <?php if (!empty($latest_updates)): ?>
     <section class="content-section">
         <div class="section-header">
@@ -152,11 +183,7 @@ $type_persian = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => '
     </section>
     <?php endif; ?>
 
-    <!-- ============================================= -->
-    <!--          شروع اسلایدرهای جدید شما            -->
-    <!-- ============================================= -->
-
-    <!-- بخش جدید ۱: تازه به NovelWorld اضافه شدند -->
+    <!-- بخش ۴: تازه به NovelWorld اضافه شدند -->
     <?php if (!empty($newest_arrivals)): ?>
     <section class="content-section">
         <div class="section-header">
@@ -191,7 +218,7 @@ $type_persian = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => '
     <?php endif; ?>
 
 
-    <!-- بخش جدید ۲: آثار تکمیل شده -->
+    <!-- بخش ۵: آثار تکمیل شده -->
     <?php if (!empty($completed_works)): ?>
     <section class="content-section">
         <div class="section-header">
@@ -226,7 +253,7 @@ $type_persian = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => '
     </section>
     <?php endif; ?>
     
-    <!-- بخش جدید ۳: امتیازآورترین‌ها -->
+    <!-- بخش ۶: امتیازآورترین‌ها -->
     <?php if (!empty($highest_rated)): ?>
     <section class="content-section">
         <div class="section-header">
@@ -261,12 +288,7 @@ $type_persian = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => '
     </section>
     <?php endif; ?>
 
-    <!-- ============================================= -->
-    <!--           پایان اسلایدرهای جدید              -->
-    <!-- ============================================= -->
-
-
-    <!-- بخش: برترین آثار تالیفی -->
+    <!-- بخش ۷: برترین آثار تالیفی -->
     <?php if (!empty($top_originals)): ?>
     <section class="content-section">
         <div class="section-header">
@@ -301,7 +323,7 @@ $type_persian = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => '
     </section>
     <?php endif; ?>
     
-    <!-- بخش: برترین آثار ترجمه -->
+    <!-- بخش ۸: برترین آثار ترجمه -->
     <?php if (!empty($top_translated)): ?>
     <section class="content-section">
         <div class="section-header">
@@ -383,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Carousels Navigation Logic ---
-    const carousels = document.querySelectorAll('.works-carousel');
+    const carousels = document.querySelectorAll('.works-carousel, .genre-carousel');
     carousels.forEach(carousel => {
         const prevBtn = document.querySelector(`.prev-arrow[data-carousel="${carousel.id}"]`);
         const nextBtn = document.querySelector(`.next-arrow[data-carousel="${carousel.id}"]`);
