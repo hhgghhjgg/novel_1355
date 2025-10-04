@@ -1,14 +1,17 @@
 /*
 =====================================================
-    NovelWorld - Main Stylesheet (FINAL & COMPLETE)
-    Version: 3.1 (Redesigned with all carousels)
+    NovelWorld - Main Stylesheet (FINAL ENHANCED)
+    Version: 3.2 (Infused with MangaUp's energy)
 =====================================================
+    - This version provides a more energetic and dense UI,
+      inspired by modern webtoon/manga platforms.
 */
 
 /* --- گام ۱: تعریف متغیرها و استایل‌های پایه --- */
 :root {
-    --bg-color: #000000; /* پس‌زمینه مشکی خالص برای کنتراست بالاتر */
-    --surface-color: #121212; /* یک لایه تیره‌تر برای سطوح */
+    /* تغییر ۱: پس‌زمینه مشکی خالص برای کنتراست بالاتر */
+    --bg-color: #000000;
+    --surface-color: #121212;
     --primary-color: #FFC107;
     --primary-hover-color: #FFD54F;
     --text-color: #f0f0f0;
@@ -27,8 +30,8 @@ body {
     color: var(--text-color);
     font-family: 'Vazirmatn', sans-serif;
     direction: rtl;
-    padding-top: 70px; /* برای هدر ثابت */
-    overflow-x: hidden; /* جلوگیری از اسکرول افقی ناخواسته */
+    padding-top: 70px;
+    overflow-x: hidden;
 }
 
 .btn {
@@ -54,7 +57,7 @@ body {
     box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
 }
 
-/* --- گام ۲: هیرو اسلایدر جدید --- */
+/* --- گام ۲: هیرو اسلایدر --- */
 .hero-slider-section {
     width: 100vw;
     height: 75vh;
@@ -63,7 +66,7 @@ body {
     position: relative;
     overflow: hidden;
     margin-bottom: 40px;
-    margin-top: -70px; /* برای اینکه زیر هدر برود */
+    margin-top: -70px;
 }
 .hero-slider {
     display: flex;
@@ -122,8 +125,6 @@ body {
 .hero-btn .material-symbols-outlined {
     font-size: 20px;
 }
-
-/* Dots for Hero Slider */
 .hero-slider-dots {
     position: absolute;
     bottom: 20px;
@@ -188,9 +189,9 @@ body {
 }
 .works-carousel {
     display: flex;
-    gap: 20px;
+    gap: 15px; /* تغییر ۳: کم کردن فاصله برای تراکم بیشتر */
     overflow-x: auto;
-    padding-bottom: 15px; /* برای ایجاد فضا برای scrollbar */
+    padding-bottom: 15px;
     scrollbar-width: thin;
     scrollbar-color: var(--primary-color) var(--surface-color);
     scroll-snap-type: x mandatory;
@@ -207,9 +208,10 @@ body {
     border-radius: 6px;
 }
 
-/* --- گام ۴: طراحی جدید کارت‌های محتوا --- */
+/* --- گام ۴: طراحی نهایی کارت‌های محتوا --- */
 .work-card {
-    flex: 0 0 180px; /* عرض ثابت برای هر کارت */
+    /* تغییر ۲: کوچک‌تر کردن کارت‌ها برای نمایش تعداد بیشتر (افزایش تراکم) */
+    flex: 0 0 160px;
     scroll-snap-align: start;
 }
 .work-card a {
@@ -218,14 +220,15 @@ body {
 .card-image-wrapper {
     position: relative;
     aspect-ratio: 2 / 3;
-    border-radius: 12px;
+    border-radius: 8px; /* گوشه‌های کمی تیزتر */
     overflow: hidden;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
     transition: transform 0.3s, box-shadow 0.3s;
 }
 .work-card:hover .card-image-wrapper {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.7);
+    transform: translateY(-5px) scale(1.03);
+    /* تغییر ۳: اضافه کردن افکت درخشش (Glow) */
+    box-shadow: 0 10px 20px rgba(0,0,0,0.6), 0 0 25px rgba(255, 193, 7, 0.3);
 }
 .card-img {
     width: 100%;
@@ -236,13 +239,13 @@ body {
     position: absolute;
     bottom: 0; left: 0; right: 0;
     height: 70%;
-    background: linear-gradient(to top, rgba(0,0,0,0.9) 10%, transparent);
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 15%, transparent);
     z-index: 1;
 }
 .card-top-badges {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: 8px;
+    right: 8px;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
@@ -252,34 +255,36 @@ body {
 .badge {
     padding: 3px 10px;
     border-radius: 15px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
-    background-color: rgba(0,0,0,0.6);
+    background-color: rgba(0,0,0,0.7);
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
     color: var(--text-color);
+    text-transform: uppercase;
 }
 .badge.type-badge {
     color: var(--primary-color);
 }
 .card-bottom-info {
     position: absolute;
-    bottom: 15px;
-    right: 15px;
-    left: 15px;
+    bottom: 10px;
+    right: 10px;
+    left: 10px;
     z-index: 2;
     color: white;
 }
 .card-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 5px;
+    /* تغییر ۴: بولدتر کردن و تغییر فونت عناوین */
+    font-size: 1rem;
+    font-weight: 800; /* بسیار ضخیم */
+    margin-bottom: 4px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 .card-chapter {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--primary-color);
 }
 
@@ -316,11 +321,12 @@ body {
     }
     .works-carousel { 
         scroll-snap-type: none; /* غیرفعال کردن اسنپ در موبایل برای اسکرول روان‌تر */
+        gap: 10px;
     }
     .work-card { 
-        flex: 0 0 140px; 
+        flex: 0 0 130px; /* کوچک‌تر کردن کارت‌ها در موبایل */
     }
     .card-title { 
-        font-size: 1rem; 
+        font-size: 0.9rem; 
     }
 }
