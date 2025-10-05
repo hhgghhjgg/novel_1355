@@ -1,15 +1,15 @@
 /*
 =====================================================
     NovelWorld - Main Stylesheet (FINAL & COMPLETE)
-    Version: 4.2 (With Horizontal Carousels for Editor's Pick & Rated)
+    Version: 4.3 (Implementing User's Wireframe Design)
 =====================================================
 */
 
 /* --- A. ساختار و عناصر کلی --- */
 :root {
-    --bg-color: #0A0A0A; /* مشکی غنی */
+    --bg-color: #0A0A0A;
     --surface-color: #121212;
-    --accent-color: #F5D020; /* طلایی نئونی */
+    --accent-color: #F5D020;
     --accent-hover-color: #FFD700;
     --text-primary-color: #EAEAEA;
     --text-secondary-color: #888888;
@@ -54,8 +54,7 @@ body {
     box-shadow: 0 4px 15px rgba(245, 208, 32, 0.3);
 }
 
-/* --- B. هدر و بخش ناوبری بالایی --- */
-/* B2. اسلایدشو برجسته */
+/* --- B. هیرو اسلایدر --- */
 .hero-carousel-section {
     width: 100vw;
     height: 75vh;
@@ -115,9 +114,6 @@ body {
     font-weight: 500;
     margin-bottom: 20px;
 }
-.hero-cta .material-symbols-outlined {
-    font-size: 20px;
-}
 .hero-carousel-dots {
     position: absolute;
     bottom: 30px;
@@ -140,7 +136,7 @@ body {
     transform: scale(1.2);
 }
 
-/* --- C. نوار ابزار و دسترسی سریع --- */
+/* --- C. نوار دسترسی سریع --- */
 .quick-access-section {
     padding: 0 40px;
     max-width: 1400px;
@@ -174,7 +170,7 @@ body {
     border-color: var(--accent-color);
 }
 
-/* --- D. بخش‌های محتوایی پایین --- */
+/* --- D. بخش‌های محتوایی --- */
 .content-section {
     max-width: 1400px;
     margin: 0 auto 50px auto;
@@ -205,7 +201,6 @@ body {
 }
 .nav-arrow:hover { background-color: var(--accent-color); color: var(--bg-color); }
 
-/* استایل عمومی کاروسل‌ها */
 .works-carousel {
     display: flex;
     gap: 15px;
@@ -218,7 +213,7 @@ body {
 .works-carousel::-webkit-scrollbar-track { background: var(--surface-color); }
 .works-carousel::-webkit-scrollbar-thumb { background-color: var(--accent-color); border-radius: 6px; }
 
-/* D1 & D3. کارت‌های عمودی */
+/* استایل کارت‌های عمودی */
 .work-card { flex: 0 0 160px; }
 .work-card a { text-decoration: none; }
 .card-image-wrapper {
@@ -233,17 +228,6 @@ body {
     box-shadow: 0 0 25px rgba(245, 208, 32, 0.3);
 }
 .card-img { width: 100%; height: 100%; object-fit: cover; }
-.card-top-badges {
-    position: absolute; top: 8px; right: 8px;
-    display: flex; flex-direction: column; align-items: flex-end; gap: 5px; z-index: 2;
-}
-.badge {
-    padding: 3px 10px; border-radius: 15px;
-    font-size: 0.7rem; font-weight: 700;
-    background-color: rgba(0,0,0,0.7);
-    backdrop-filter: blur(5px); color: var(--text-primary-color);
-}
-.badge.type-badge { color: var(--accent-color); }
 .card-content { margin-top: 10px; }
 .card-title {
     font-size: 1rem; font-weight: 500;
@@ -253,85 +237,35 @@ body {
 }
 .card-chapter { font-size: 0.85rem; color: var(--text-secondary-color); }
 
-/* D2. پیشنهاد سردبیر (اسلایدر افقی) */
-.editors-pick-slide {
-    flex: 0 0 320px;
-}
-.editors-pick-card {
-    display: flex;
-    gap: 15px;
-    background-color: var(--surface-color);
-    border-radius: 12px;
-    overflow: hidden; text-decoration: none;
-    border: 1px solid var(--border-color);
-    transition: all 0.2s;
-    height: 100%;
-}
-.editors-pick-card:hover {
-    border-color: var(--accent-color);
-    transform: scale(1.02);
-    box-shadow: 0 0 20px rgba(245, 208, 32, 0.2);
-}
-.ep-card-img { width: 100px; height: 100%; object-fit: cover; }
-.ep-card-content { padding: 15px 15px 15px 0; color: var(--text-primary-color); display: flex; flex-direction: column; }
-.ep-card-title { font-size: 1.1rem; font-weight: 700; margin: 5px 0 8px 0; }
-.ep-card-summary { font-size: 0.9rem; color: var(--text-secondary-color); line-height: 1.6; }
+/* --- استایل‌های جدید بر اساس طرح شما --- */
 
-/* D4. محبوب‌ترین‌ها (اسلایدر با کارت‌های افقی جدید) */
-.rated-slide {
-    flex: 0 0 280px;
+/* D2. پیشنهاد سردبیر (Wireframe) */
+.ep-slide-wireframe {
+    flex: 0 0 380px; /* عرض کارت */
 }
-.rated-card-horizontal {
+.ep-card-wireframe {
     display: flex;
-    align-items: center;
     text-decoration: none;
     background-color: var(--surface-color);
-    border-radius: 12px;
     border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 15px;
+    height: 100%;
     transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-    height: 100px;
 }
-.rated-card-horizontal:hover {
+.ep-card-wireframe:hover {
     border-color: var(--accent-color);
     transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
-.rated-card-rank-bg {
-    position: absolute;
-    left: -20px;
-    top: -20px;
-    width: 80px;
-    height: 80px;
-    background-color: var(--accent-color);
-    color: var(--bg-color);
-    font-size: 1.8rem;
-    font-weight: 800;
+.ep-card-text {
+    flex: 1;
     display: flex;
-    justify-content: flex-end;
-    align-items: flex-end;
-    padding: 8px;
-    transform: rotate(-45deg);
-    transform-origin: center;
-    z-index: 2;
-}
-.rated-card-rank-bg span {
-    font-size: 1rem;
-    margin-bottom: 2px;
-}
-.rated-card-img-h {
-    width: 70px;
-    height: 100%;
-    object-fit: cover;
-    margin-right: 20px;
-}
-.rated-card-info-h {
-    padding: 15px;
+    flex-direction: column;
+    padding-left: 15px;
     overflow: hidden;
 }
-.rated-card-title-h {
-    font-size: 1rem;
+.ep-card-title {
+    font-size: 1.2rem;
     font-weight: 700;
     color: var(--text-primary-color);
     white-space: nowrap;
@@ -339,10 +273,111 @@ body {
     text-overflow: ellipsis;
     margin-bottom: 8px;
 }
-.rated-card-meta-h {
-    display: flex;
-    gap: 8px;
+.ep-card-summary {
+    font-size: 0.85rem;
+    color: var(--text-secondary-color);
+    line-height: 1.6;
+    flex-grow: 1;
+    /* محدود کردن به 4 خط */
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
+.ep-card-meta {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-secondary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.ep-card-chapter {
+    color: var(--accent-color);
+    font-weight: 700;
+    margin-left: 10px;
+}
+.ep-card-image {
+    width: 120px;
+    flex-shrink: 0;
+    position: relative;
+}
+.ep-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+}
+.badge {
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background-color: rgba(0,0,0,0.7);
+    color: var(--text-primary-color);
+}
+.status-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px; /* چپ‌چین برای هماهنگی با طرح */
+}
+
+/* D4. محبوب‌ترین‌ها (Wireframe) */
+.rated-slide-wireframe {
+    flex: 0 0 300px;
+}
+.rated-card-wireframe {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    text-decoration: none;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 15px;
+    height: 100%;
+    transition: all 0.2s;
+}
+.rated-card-wireframe:hover {
+    border-color: var(--accent-color);
+    transform: translateY(-3px);
+}
+.rated-card-rank {
+    width: 50px;
+    height: 50px;
+    flex-shrink: 0;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text-secondary-color);
+}
+.rated-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 5px;
+}
+.rated-card-details {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.rated-card-rating {
+    color: var(--accent-color);
+    font-weight: 700;
+}
+.rated-card-details .status-badge {
+    position: static; /* حذف حالت absolute */
+    background-color: var(--border-color); /* رنگ متفاوت برای تمایز */
+}
+
 
 /* --- F. واکنش‌گرایی --- */
 @media (max-width: 768px) {
@@ -361,6 +396,6 @@ body {
     .work-card { flex: 0 0 130px; }
     .card-title { font-size: 0.9rem; }
     
-    .editors-pick-slide { flex: 0 0 280px; }
-    .rated-slide { flex: 0 0 250px; }
-}```
+    .ep-slide-wireframe { flex: 0 0 90%; }
+    .rated-slide-wireframe { flex: 0 0 280px; }
+}
