@@ -2,17 +2,16 @@
 /*
 =====================================================
     NovelWorld - Main Index Page (FINAL & COMPLETE)
-    Version: 4.2 (With Horizontal Carousels for Editor's Pick & Rated)
+    Version: 4.3 (Implementing User's Wireframe Design)
 =====================================================
-    - This is the final, complete code for the redesigned homepage.
-    - Implements horizontal carousels for "Editor's Pick" and
-      "Highest Rated" sections with their unique card designs.
+    - The "Editor's Pick" and "Highest Rated" sections have been
+      completely redesigned to match the user's specific wireframe.
 */
 
 // --- گام ۱: فراخوانی هدر و اتصال به دیتابیس ---
 require_once 'header.php';
 
-// --- گام ۲: واکشی داده‌ها برای تمام بخش‌های جدید ---
+// --- گام ۲: واکشی داده‌ها برای تمام بخش‌ها ---
 $hero_slides = [];
 $latest_updates = [];
 $editors_picks = [];
@@ -20,7 +19,7 @@ $newly_added = [];
 $highest_rated = [];
 
 try {
-    // تابع کمکی برای افزودن شماره آخرین چپتر به لیست ناول‌ها
+    // تابع کمکی برای افزودن شماره آخرین چپتر
     function enrich_novels_with_latest_chapter($conn, $novels_array) {
         if (empty($novels_array)) return [];
         $novel_ids = array_column($novels_array, 'id');
@@ -36,14 +35,12 @@ try {
         return $novels_array;
     }
 
-    // ۱. هیرو اسلایدر
+    // واکشی داده‌ها برای بخش‌های مختلف
     $hero_slides = $conn->query("SELECT id, title, summary, cover_url, author, genres FROM novels ORDER BY created_at DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
 
-    // ۲. جدیدترین بروزرسانی‌ها
     $latest_updates_stmt = $conn->query(
         "SELECT n.id, n.title, n.cover_url, n.rating, n.type
-         FROM novels n
-         JOIN (
+         FROM novels n JOIN (
              SELECT novel_id, MAX(published_at) as last_published
              FROM chapters WHERE status = 'approved' AND published_at <= NOW() GROUP BY novel_id
          ) as latest_chapters ON n.id = latest_chapters.novel_id
@@ -52,22 +49,25 @@ try {
     $latest_updates = $latest_updates_stmt->fetchAll(PDO::FETCH_ASSOC);
     $latest_updates = enrich_novels_with_latest_chapter($conn, $latest_updates);
 
-    // ۳. انتخاب سردبیر
-    $editors_picks = $conn->query("SELECT id, title, summary, cover_url, rating, type, genres FROM novels WHERE rating > 8.0 ORDER BY RANDOM() LIMIT 8")->fetchAll(PDO::FETCH_ASSOC);
+    // برای کارت پیشنهاد سردبیر به اطلاعات بیشتری نیاز داریم
+    $editors_picks_query = $conn->query("SELECT id, title, summary, cover_url, rating, type, genres, status FROM novels WHERE rating > 8.0 ORDER BY RANDOM() LIMIT 8");
+    $editors_picks = $editors_picks_query->fetchAll(PDO::FETCH_ASSOC);
+    $editors_picks = enrich_novels_with_latest_chapter($conn, $editors_picks);
 
-    // ۴. اثرهای جدید
     $newly_added = $conn->query("SELECT id, title, cover_url, rating, type FROM novels ORDER BY created_at DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
-    $newly_added = enrich_novels_with_latest_chapter($conn, $newly_added);
     
-    // ۵. محبوب‌ترین‌ها
-    $highest_rated = $conn->query("SELECT id, title, cover_url, rating, type FROM novels ORDER BY rating DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+    // برای کارت محبوب‌ترین‌ها به اطلاعات بیشتری نیاز داریم
+    $highest_rated_query = $conn->query("SELECT id, title, cover_url, rating, type, status FROM novels ORDER BY rating DESC LIMIT 10");
+    $highest_rated = $highest_rated_query->fetchAll(PDO::FETCH_ASSOC);
+
 
 } catch (PDOException $e) {
-    error_log("Index Page Redesign Fetch Error: " . $e->getMessage());
+    error_log("Index Page Wireframe Fetch Error: " . $e->getMessage());
 }
 
-// آرایه‌های کمکی برای نمایش
+// آرایه‌های کمکی
 $type_persian = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => 'مانگا'];
+$status_persian = ['ongoing' => 'درحال پخش', 'completed' => 'تکمیل شده', 'hiatus' => 'متوقف'];
 $quick_access_genres = [
     ['name' => 'اکشن', 'icon' => 'bolt'], ['name' => 'فانتزی', 'icon' => 'auto_stories'],
     ['name' => 'عاشقانه', 'icon' => 'favorite'], ['name' => 'ماجراجویی', 'icon' => 'explore'],
@@ -125,10 +125,6 @@ $quick_access_genres = [
                     <a href="novel_detail.php?id=<?php echo $novel['id']; ?>">
                         <div class="card-image-wrapper">
                             <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="card-img" loading="lazy">
-                            <div class="card-top-badges">
-                                <span class="badge type-badge"><?php echo $type_persian[$novel['type']]; ?></span>
-                                <span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span>
-                            </div>
                         </div>
                         <div class="card-content">
                             <h3 class="card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
@@ -143,7 +139,7 @@ $quick_access_genres = [
     </section>
     <?php endif; ?>
     
-    <!-- پیشنهاد سردبیر (اسلایدر افقی) -->
+    <!-- پیشنهاد سردبیر (بر اساس طرح جدید شما) -->
     <?php if (!empty($editors_picks)): ?>
     <section class="content-section">
         <div class="section-header">
@@ -155,13 +151,21 @@ $quick_access_genres = [
         </div>
         <div class="works-carousel" id="editors-carousel">
             <?php foreach ($editors_picks as $novel): ?>
-                <div class="editors-pick-slide">
-                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>" class="editors-pick-card">
-                        <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="ep-card-img" loading="lazy">
-                        <div class="ep-card-content">
-                            <span class="badge type-badge"><?php echo htmlspecialchars(explode(',', $novel['genres'])[0]); ?></span>
+                <div class="ep-slide-wireframe">
+                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>" class="ep-card-wireframe">
+                        <div class="ep-card-text">
                             <h3 class="ep-card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
-                            <p class="ep-card-summary"><?php echo htmlspecialchars(mb_substr(trim($novel['summary']), 0, 90, "UTF-8")) . '...'; ?></p>
+                            <p class="ep-card-summary"><?php echo htmlspecialchars(mb_substr(trim($novel['summary']), 0, 150, "UTF-8")) . '...'; ?></p>
+                            <div class="ep-card-meta">
+                                <?php if ($novel['latest_chapter'] > 0): ?>
+                                    <span class="ep-card-chapter">Ch. <?php echo htmlspecialchars($novel['latest_chapter']); ?></span>
+                                <?php endif; ?>
+                                <span class="ep-card-genres"><?php echo htmlspecialchars(str_replace(',', '، ', $novel['genres'])); ?></span>
+                            </div>
+                        </div>
+                        <div class="ep-card-image">
+                            <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" loading="lazy" alt="<?php echo htmlspecialchars($novel['title']); ?>">
+                            <span class="badge status-badge"><?php echo $status_persian[$novel['status']] ?? 'نامشخص'; ?></span>
                         </div>
                     </a>
                 </div>
@@ -197,7 +201,7 @@ $quick_access_genres = [
     </section>
     <?php endif; ?>
     
-    <!-- محبوب‌ترین‌ها (اسلایدر با کارت‌های افقی جدید) -->
+    <!-- محبوب‌ترین‌ها (بر اساس طرح جدید شما) -->
     <?php if (!empty($highest_rated)): ?>
     <section class="content-section">
         <div class="section-header">
@@ -209,18 +213,15 @@ $quick_access_genres = [
         </div>
         <div class="works-carousel" id="rated-carousel">
             <?php foreach ($highest_rated as $index => $novel): ?>
-                <div class="rated-slide">
-                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>" class="rated-card-horizontal">
-                        <div class="rated-card-rank-bg">
-                            <span>#</span><?php echo $index + 1; ?>
+                <div class="rated-slide-wireframe">
+                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>" class="rated-card-wireframe">
+                        <div class="rated-card-rank">
+                            <span><?php echo $index + 1; ?></span>
                         </div>
-                        <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="rated-card-img-h" loading="lazy">
-                        <div class="rated-card-info-h">
-                            <h3 class="rated-card-title-h"><?php echo htmlspecialchars($novel['title']); ?></h3>
-                            <div class="rated-card-meta-h">
-                                <span class="badge type-badge"><?php echo $type_persian[$novel['type']]; ?></span>
-                                <span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span>
-                            </div>
+                        <h3 class="rated-card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
+                        <div class="rated-card-details">
+                            <span class="rated-card-rating">★ <?php echo htmlspecialchars($novel['rating']); ?></span>
+                            <span class="badge status-badge"><?php echo $status_persian[$novel['status']] ?? 'نامشخص'; ?></span>
                         </div>
                     </a>
                 </div>
@@ -233,58 +234,41 @@ $quick_access_genres = [
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Hero Carousel Logic ---
+    // Hero Carousel Logic
     const heroCarousel = document.querySelector('.hero-carousel');
     if (heroCarousel) {
         const slides = heroCarousel.querySelectorAll('.hero-slide');
         const dotsContainer = document.querySelector('.hero-carousel-dots');
         if (slides.length > 1) {
-            let currentIndex = 0;
-            let slideInterval;
+            let currentIndex = 0; let slideInterval;
             slides.forEach((_, index) => {
                 const dot = document.createElement('button');
                 dot.classList.add('hero-dot');
                 if (index === 0) dot.classList.add('active');
-                dot.addEventListener('click', () => {
-                    goToSlide(index);
-                    resetInterval();
-                });
+                dot.addEventListener('click', () => { goToSlide(index); resetInterval(); });
                 dotsContainer.appendChild(dot);
             });
             const dots = dotsContainer.querySelectorAll('.hero-dot');
-
             function goToSlide(index) {
                 heroCarousel.style.transform = `translateX(-${index * 100}%)`;
                 dots.forEach(dot => dot.classList.remove('active'));
                 dots[index].classList.add('active');
                 currentIndex = index;
             }
-
-            function nextSlide() {
-                goToSlide((currentIndex + 1) % slides.length);
-            }
-            
-            function resetInterval() {
-                clearInterval(slideInterval);
-                slideInterval = setInterval(nextSlide, 5000); // 5 seconds
-            }
+            function nextSlide() { goToSlide((currentIndex + 1) % slides.length); }
+            function resetInterval() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 5000); }
             resetInterval();
         }
     }
 
-    // --- Works Carousels Navigation Logic ---
+    // Works Carousels Navigation Logic
     const carousels = document.querySelectorAll('.works-carousel');
     carousels.forEach(carousel => {
         const prevBtn = document.querySelector(`.prev-arrow[data-carousel="${carousel.id}"]`);
         const nextBtn = document.querySelector(`.next-arrow[data-carousel="${carousel.id}"]`);
-        
         if (prevBtn && nextBtn) {
-            nextBtn.addEventListener('click', () => {
-                carousel.scrollBy({ left: carousel.clientWidth * 0.8, behavior: 'smooth' });
-            });
-            prevBtn.addEventListener('click', () => {
-                carousel.scrollBy({ left: -carousel.clientWidth * 0.8, behavior: 'smooth' });
-            });
+            nextBtn.addEventListener('click', () => carousel.scrollBy({ left: carousel.clientWidth * 0.8, behavior: 'smooth' }));
+            prevBtn.addEventListener('click', () => carousel.scrollBy({ left: -carousel.clientWidth * 0.8, behavior: 'smooth' }));
         }
     });
 });
