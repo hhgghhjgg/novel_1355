@@ -1,21 +1,18 @@
 /*
 =====================================================
-    NovelWorld - Main Stylesheet (FINAL ENHANCED)
-    Version: 3.2 (Infused with MangaUp's energy)
+    NovelWorld - Main Stylesheet (FINAL & COMPLETE)
+    Version: 4.1 (Based on the new UI/UX Prompt)
 =====================================================
-    - This version provides a more energetic and dense UI,
-      inspired by modern webtoon/manga platforms.
 */
 
-/* --- گام ۱: تعریف متغیرها و استایل‌های پایه --- */
+/* --- A. ساختار و عناصر کلی --- */
 :root {
-    /* تغییر ۱: پس‌زمینه مشکی خالص برای کنتراست بالاتر */
-    --bg-color: #000000;
+    --bg-color: #0A0A0A; /* مشکی غنی */
     --surface-color: #121212;
-    --primary-color: #FFC107;
-    --primary-hover-color: #FFD54F;
-    --text-color: #f0f0f0;
-    --text-secondary-color: #a0a0a0;
+    --accent-color: #F5D020; /* طلایی نئونی */
+    --accent-hover-color: #FFD700;
+    --text-primary-color: #EAEAEA;
+    --text-secondary-color: #888888;
     --border-color: #222222;
 }
 
@@ -27,7 +24,7 @@
 
 body {
     background-color: var(--bg-color);
-    color: var(--text-color);
+    color: var(--text-primary-color);
     font-family: 'Vazirmatn', sans-serif;
     direction: rtl;
     padding-top: 70px;
@@ -45,30 +42,31 @@ body {
     font-weight: 700;
     border: none;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease-in-out;
 }
 .btn-primary {
-    background-color: var(--primary-color);
+    background-color: var(--accent-color);
     color: var(--bg-color);
 }
 .btn-primary:hover {
-    background-color: var(--primary-hover-color);
+    background-color: var(--accent-hover-color);
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+    box-shadow: 0 4px 15px rgba(245, 208, 32, 0.3);
 }
 
-/* --- گام ۲: هیرو اسلایدر --- */
-.hero-slider-section {
+/* --- B. هدر و بخش ناوبری بالایی --- */
+/* B2. اسلایدشو برجسته */
+.hero-carousel-section {
     width: 100vw;
     height: 75vh;
     min-height: 500px;
     max-height: 700px;
     position: relative;
     overflow: hidden;
-    margin-bottom: 40px;
+    margin-bottom: 20px; /* کاهش فاصله */
     margin-top: -70px;
 }
-.hero-slider {
+.hero-carousel {
     display: flex;
     height: 100%;
     transition: transform 0.8s cubic-bezier(0.77, 0, 0.175, 1);
@@ -85,51 +83,45 @@ body {
     width: 100%; height: 100%;
     background-size: cover;
     background-position: center;
-    filter: brightness(0.6);
-}
-.hero-slide-overlay {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: linear-gradient(to top, rgba(0,0,0,0.8) 10%, transparent 50%),
-                linear-gradient(to right, rgba(0,0,0,0.7) 15%, transparent 50%);
+    filter: brightness(0.7);
+    transform: scale(1.1);
 }
 .hero-slide-content {
-    position: relative;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 0;
+    background: linear-gradient(to top, rgba(10, 10, 10, 0.9) 10%, transparent 50%),
+                linear-gradient(to right, rgba(10, 10, 10, 0.8) 15%, transparent 60%);
     z-index: 2;
-    height: 100%;
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 0 40px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: flex-start;
+    justify-content: flex-end; /* تراز از پایین */
+    padding-bottom: 10%;
 }
 .hero-title {
-    font-size: 3.5rem;
+    font-size: 3rem;
     font-weight: 800;
-    text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+    text-shadow: 1px 1px 10px rgba(0,0,0,0.5);
+    margin: 0;
 }
-.hero-author {
-    font-size: 1.2rem;
-    color: var(--text-secondary-color);
-    margin-bottom: 15px;
-}
-.hero-summary {
+.hero-subtitle {
     font-size: 1.1rem;
-    line-height: 1.7;
-    max-width: 500px;
-    margin-bottom: 25px;
+    color: var(--accent-color);
+    font-weight: 500;
+    margin-bottom: 20px;
 }
-.hero-btn .material-symbols-outlined {
+.hero-cta .material-symbols-outlined {
     font-size: 20px;
 }
-.hero-slider-dots {
+.hero-carousel-dots {
     position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    bottom: 30px;
+    left: 40px; /* انتقال به سمت چپ */
     display: flex;
     gap: 10px;
     z-index: 5;
@@ -144,11 +136,45 @@ body {
     transition: all 0.3s;
 }
 .hero-dot.active {
-    background-color: white;
+    background-color: var(--accent-color);
     transform: scale(1.2);
 }
 
-/* --- گام ۳: استایل بخش‌های محتوا و کاروسل‌ها --- */
+/* --- C. نوار ابزار و دسترسی سریع --- */
+.quick-access-section {
+    padding: 0 40px;
+    max-width: 1400px;
+    margin: 0 auto 40px auto;
+}
+.quick-access-bar {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 10px 0;
+    scrollbar-width: none;
+}
+.quick-access-bar::-webkit-scrollbar { display: none; }
+.qa-chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    color: var(--text-secondary-color);
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.qa-chip:hover {
+    background-color: var(--accent-color);
+    color: var(--bg-color);
+    border-color: var(--accent-color);
+}
+
+/* --- D. بخش‌های محتوایی پایین --- */
 .content-section {
     max-width: 1400px;
     margin: 0 auto 50px auto;
@@ -161,217 +187,132 @@ body {
     margin-bottom: 20px;
 }
 .section-title {
-    font-size: 1.8rem;
+    font-size: 1.5rem; /* کمی کوچکتر و مدرن‌تر */
     font-weight: 700;
 }
-.carousel-nav {
-    display: flex;
-    gap: 10px;
-}
+.carousel-nav { display: flex; gap: 10px; }
 .nav-arrow {
     background-color: var(--surface-color);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    width: 35px;
-    height: 35px;
+    width: 35px; height: 35px;
     border-radius: 50%;
-    cursor: pointer;
-    font-size: 1.2rem;
+    cursor: pointer; font-size: 1.2rem;
     transition: all 0.2s;
     display: flex;
     justify-content: center;
     align-items: center;
 }
-.nav-arrow:hover {
-    background-color: var(--primary-color);
-    color: var(--bg-color);
-    border-color: var(--primary-color);
-}
+.nav-arrow:hover { background-color: var(--accent-color); color: var(--bg-color); }
+
+/* D1 & D3. کارت‌های عمودی */
 .works-carousel {
-    display: flex;
-    gap: 15px; /* تغییر ۳: کم کردن فاصله برای تراکم بیشتر */
-    overflow-x: auto;
-    padding-bottom: 15px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-color) var(--surface-color);
-    scroll-snap-type: x mandatory;
-}
-.works-carousel::-webkit-scrollbar {
-    height: 6px;
-}
-.works-carousel::-webkit-scrollbar-track {
-    background: var(--surface-color);
-    border-radius: 3px;
-}
-.works-carousel::-webkit-scrollbar-thumb {
-    background-color: var(--primary-color);
-    border-radius: 6px;
-}
-
-/* --- گام ۴: طراحی نهایی کارت‌های محتوا --- */
-.work-card {
-    /* تغییر ۲: کوچک‌تر کردن کارت‌ها برای نمایش تعداد بیشتر (افزایش تراکم) */
-    flex: 0 0 160px;
-    scroll-snap-align: start;
-}
-.work-card a {
-    text-decoration: none;
-}
-.card-image-wrapper {
-    position: relative;
-    aspect-ratio: 2 / 3;
-    border-radius: 8px; /* گوشه‌های کمی تیزتر */
-    overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-.work-card:hover .card-image-wrapper {
-    transform: translateY(-5px) scale(1.03);
-    /* تغییر ۳: اضافه کردن افکت درخشش (Glow) */
-    box-shadow: 0 10px 20px rgba(0,0,0,0.6), 0 0 25px rgba(255, 193, 7, 0.3);
-}
-.card-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.card-overlay-gradient {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 70%;
-    background: linear-gradient(to top, rgba(0,0,0,0.95) 15%, transparent);
-    z-index: 1;
-}
-.card-top-badges {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 5px;
-    z-index: 2;
-}
-.badge {
-    padding: 3px 10px;
-    border-radius: 15px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    background-color: rgba(0,0,0,0.7);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    color: var(--text-color);
-    text-transform: uppercase;
-}
-.badge.type-badge {
-    color: var(--primary-color);
-}
-.card-bottom-info {
-    position: absolute;
-    bottom: 10px;
-    right: 10px;
-    left: 10px;
-    z-index: 2;
-    color: white;
-}
-.card-title {
-    /* تغییر ۴: بولدتر کردن و تغییر فونت عناوین */
-    font-size: 1rem;
-    font-weight: 800; /* بسیار ضخیم */
-    margin-bottom: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.card-chapter {
-    font-size: 0.85rem;
-    color: var(--primary-color);
-}
-
-/* --- گام ۵: واکنش‌گرایی --- */
-@media (max-width: 768px) {
-    body { 
-        padding-top: 60px; 
-    }
-    .hero-slider-section { 
-        height: 60vh; 
-        min-height: 450px; 
-        margin-top: -60px;
-    }
-    .hero-slide-content { 
-        padding: 0 20px; 
-        align-items: center; /* مرکزچین کردن محتوا در موبایل */
-        text-align: center;
-    }
-    .hero-title { 
-        font-size: 2.2rem; 
-    }
-    .hero-summary { 
-        display: none; /* مخفی کردن خلاصه در موبایل برای سادگی */
-    }
-    
-    .content-section { 
-        padding: 0 15px; 
-    }
-    .section-title { 
-        font-size: 1.5rem; 
-    }
-    .carousel-nav { 
-        display: none; /* مخفی کردن دکمه‌های ناوبری در موبایل */
-    }
-    .works-carousel { 
-        scroll-snap-type: none; /* غیرفعال کردن اسنپ در موبایل برای اسکرول روان‌تر */
-        gap: 10px;
-    }
-    .work-card { 
-        flex: 0 0 130px; /* کوچک‌تر کردن کارت‌ها در موبایل */
-    }
-    .card-title { 
-        font-size: 0.9rem; 
-    }
-}
-/* --- استایل اسلایدر ژانرها --- */
-.genre-carousel {
     display: flex;
     gap: 15px;
     overflow-x: auto;
     padding-bottom: 15px;
-    scrollbar-width: none; /* For Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color) var(--surface-color);
 }
+.works-carousel::-webkit-scrollbar { height: 6px; }
+.works-carousel::-webkit-scrollbar-track { background: var(--surface-color); }
+.works-carousel::-webkit-scrollbar-thumb { background-color: var(--accent-color); border-radius: 6px; }
 
-.genre-carousel::-webkit-scrollbar {
-    display: none; /* For Chrome, Safari, etc. */
+.work-card { flex: 0 0 160px; }
+.work-card a { text-decoration: none; }
+.card-image-wrapper {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
 }
+.work-card:hover .card-image-wrapper {
+    transform: translateY(-5px) scale(1.03);
+    box-shadow: 0 0 25px rgba(245, 208, 32, 0.3);
+}
+.card-img { width: 100%; height: 100%; object-fit: cover; }
+.card-top-badges {
+    position: absolute; top: 8px; right: 8px;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 5px; z-index: 2;
+}
+.badge {
+    padding: 3px 10px; border-radius: 15px;
+    font-size: 0.7rem; font-weight: 700;
+    background-color: rgba(0,0,0,0.7);
+    backdrop-filter: blur(5px); color: var(--text-primary-color);
+}
+.badge.type-badge { color: var(--accent-color); }
+.card-content { margin-top: 10px; }
+.card-title {
+    font-size: 1rem; font-weight: 500;
+    color: var(--text-primary-color);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+.card-chapter { font-size: 0.85rem; color: var(--text-secondary-color); }
 
-.genre-card {
-    flex: 0 0 130px; /* عرض ثابت برای هر کارت */
-    height: 100px; /* ارتفاع ثابت */
-    background-color: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
+/* D2. انتخاب سردبیر */
+.editors-pick-container { display: flex; flex-direction: column; gap: 15px; }
+.editors-pick-card {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    gap: 15px;
+    background-color: var(--surface-color);
+    border-radius: 12px;
+    overflow: hidden; text-decoration: none;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
+}
+.editors-pick-card:hover {
+    border-color: var(--accent-color);
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(245, 208, 32, 0.2);
+}
+.ep-card-img { width: 100px; height: 140px; object-fit: cover; }
+.ep-card-content { padding: 15px 15px 15px 0; color: var(--text-primary-color); }
+.ep-card-title { font-size: 1.1rem; font-weight: 700; margin: 5px 0 8px 0; }
+.ep-card-summary { font-size: 0.9rem; color: var(--text-secondary-color); line-height: 1.6; }
+
+/* D4. امتیازآورترین‌ها */
+.highest-rated-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+.rated-card {
+    display: flex;
     align-items: center;
-    text-decoration: none;
-    color: var(--text-secondary-color);
-    transition: all 0.2s ease-in-out;
+    gap: 15px; text-decoration: none;
+    background-color: var(--surface-color);
+    padding: 10px; border-radius: 12px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s;
 }
-
-.genre-card:hover {
-    transform: translateY(-5px);
-    border-color: var(--primary-color);
-    color: var(--text-color);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+.rated-card:hover { border-color: var(--accent-color); transform: translateY(-3px); }
+.rated-card-rank {
+    font-size: 1.8rem; font-weight: 800; color: var(--text-secondary-color);
 }
+.rated-card-img { width: 60px; height: 85px; object-fit: cover; border-radius: 6px; }
+.rated-card-info { flex-grow: 1; }
+.rated-card-title { font-size: 1rem; font-weight: 500; color: var(--text-primary-color); }
+.rated-card-rating { font-size: 0.9rem; color: var(--accent-color); font-weight: 700; }
 
-.genre-icon {
-    font-size: 36px;
-    color: var(--primary-color);
+/* --- F. واکنش‌گرایی --- */
+@media (max-width: 768px) {
+    body { padding-top: 60px; }
+    .hero-carousel-section { height: 65vh; min-height: 450px; margin-top: -60px; }
+    .hero-slide-content { padding: 0 20px; align-items: center; text-align: center; }
+    .hero-title { font-size: 2rem; }
+    .hero-subtitle, .hero-summary { display: none; }
+    .hero-carousel-dots { left: 50%; transform: translateX(-50%); }
+
+    .quick-access-section, .content-section { padding: 0 15px; }
+    .section-title { font-size: 1.3rem; }
+    .carousel-nav { display: none; }
+    
+    .works-carousel { gap: 10px; }
+    .work-card { flex: 0 0 130px; }
+    .card-title { font-size: 0.9rem; }
+    
+    .highest-rated-grid { grid-template-columns: 1fr; }
 }
-
-.genre-name {
-    margin-top: 10px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    }
