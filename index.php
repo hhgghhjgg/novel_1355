@@ -2,10 +2,11 @@
 /*
 =====================================================
     NovelWorld - Main Index Page (FINAL & COMPLETE)
-    Version: 4.1 (With simplified, user-friendly titles)
+    Version: 4.2 (With Horizontal Carousels for Editor's Pick & Rated)
 =====================================================
-    - All creative section titles have been replaced with
-      clear and direct headings as per user request.
+    - This is the final, complete code for the redesigned homepage.
+    - Implements horizontal carousels for "Editor's Pick" and
+      "Highest Rated" sections with their unique card designs.
 */
 
 // --- گام ۱: فراخوانی هدر و اتصال به دیتابیس ---
@@ -35,10 +36,10 @@ try {
         return $novels_array;
     }
 
-    // ۱. هیرو اسلایدر (B2)
+    // ۱. هیرو اسلایدر
     $hero_slides = $conn->query("SELECT id, title, summary, cover_url, author, genres FROM novels ORDER BY created_at DESC LIMIT 5")->fetchAll(PDO::FETCH_ASSOC);
 
-    // ۲. جدیدترین بروزرسانی‌ها (D1)
+    // ۲. جدیدترین بروزرسانی‌ها
     $latest_updates_stmt = $conn->query(
         "SELECT n.id, n.title, n.cover_url, n.rating, n.type
          FROM novels n
@@ -51,16 +52,15 @@ try {
     $latest_updates = $latest_updates_stmt->fetchAll(PDO::FETCH_ASSOC);
     $latest_updates = enrich_novels_with_latest_chapter($conn, $latest_updates);
 
-    // ۳. انتخاب سردبیر (D2) - سه اثر تصادفی با امتیاز بالا
-    $editors_picks = $conn->query("SELECT id, title, summary, cover_url, rating, type, genres FROM novels WHERE rating > 8.0 ORDER BY RANDOM() LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
+    // ۳. انتخاب سردبیر
+    $editors_picks = $conn->query("SELECT id, title, summary, cover_url, rating, type, genres FROM novels WHERE rating > 8.0 ORDER BY RANDOM() LIMIT 8")->fetchAll(PDO::FETCH_ASSOC);
 
-    // ۴. تازه‌های کتابخانه (D3)
+    // ۴. اثرهای جدید
     $newly_added = $conn->query("SELECT id, title, cover_url, rating, type FROM novels ORDER BY created_at DESC LIMIT 12")->fetchAll(PDO::FETCH_ASSOC);
     $newly_added = enrich_novels_with_latest_chapter($conn, $newly_added);
     
-    // ۵. امتیازآورترین‌ها (D4)
-    $highest_rated = $conn->query("SELECT id, title, cover_url, rating, type FROM novels ORDER BY rating DESC LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
-    $highest_rated = enrich_novels_with_latest_chapter($conn, $highest_rated);
+    // ۵. محبوب‌ترین‌ها
+    $highest_rated = $conn->query("SELECT id, title, cover_url, rating, type FROM novels ORDER BY rating DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     error_log("Index Page Redesign Fetch Error: " . $e->getMessage());
@@ -76,7 +76,7 @@ $quick_access_genres = [
 ?>
 
 <main class="redesigned-homepage">
-    <!-- B2. هیرو اسلایدر برجسته -->
+    <!-- هیرو اسلایدر برجسته -->
     <?php if (!empty($hero_slides)): ?>
     <section class="hero-carousel-section">
         <div class="hero-carousel">
@@ -97,7 +97,7 @@ $quick_access_genres = [
     </section>
     <?php endif; ?>
 
-    <!-- C. نوار دسترسی سریع -->
+    <!-- نوار دسترسی سریع -->
     <section class="quick-access-section">
         <div class="quick-access-bar">
             <?php foreach ($quick_access_genres as $genre): ?>
@@ -109,7 +109,7 @@ $quick_access_genres = [
         </div>
     </section>
 
-    <!-- D1. جدیدترین بروزرسانی‌ها -->
+    <!-- جدیدترین بروزرسانی‌ها -->
     <?php if (!empty($latest_updates)): ?>
     <section class="content-section">
         <div class="section-header">
@@ -143,28 +143,34 @@ $quick_access_genres = [
     </section>
     <?php endif; ?>
     
-    <!-- D2. انتخاب سردبیر -->
+    <!-- پیشنهاد سردبیر (اسلایدر افقی) -->
     <?php if (!empty($editors_picks)): ?>
     <section class="content-section">
         <div class="section-header">
             <h2 class="section-title">پیشنهاد سردبیر</h2>
+            <div class="carousel-nav">
+                <button class="nav-arrow prev-arrow" data-carousel="editors-carousel">&lt;</button>
+                <button class="nav-arrow next-arrow" data-carousel="editors-carousel">&gt;</button>
+            </div>
         </div>
-        <div class="editors-pick-container">
+        <div class="works-carousel" id="editors-carousel">
             <?php foreach ($editors_picks as $novel): ?>
-                <a href="novel_detail.php?id=<?php echo $novel['id']; ?>" class="editors-pick-card">
-                    <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="ep-card-img" loading="lazy">
-                    <div class="ep-card-content">
-                        <span class="badge type-badge"><?php echo htmlspecialchars(explode(',', $novel['genres'])[0]); ?></span>
-                        <h3 class="ep-card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
-                        <p class="ep-card-summary"><?php echo htmlspecialchars(mb_substr(trim($novel['summary']), 0, 90, "UTF-8")) . '...'; ?></p>
-                    </div>
-                </a>
+                <div class="editors-pick-slide">
+                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>" class="editors-pick-card">
+                        <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="ep-card-img" loading="lazy">
+                        <div class="ep-card-content">
+                            <span class="badge type-badge"><?php echo htmlspecialchars(explode(',', $novel['genres'])[0]); ?></span>
+                            <h3 class="ep-card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
+                            <p class="ep-card-summary"><?php echo htmlspecialchars(mb_substr(trim($novel['summary']), 0, 90, "UTF-8")) . '...'; ?></p>
+                        </div>
+                    </a>
+                </div>
             <?php endforeach; ?>
         </div>
     </section>
     <?php endif; ?>
     
-    <!-- D3. تازه‌های کتابخانه -->
+    <!-- اثرهای جدید -->
     <?php if (!empty($newly_added)): ?>
     <section class="content-section">
         <div class="section-header">
@@ -191,22 +197,33 @@ $quick_access_genres = [
     </section>
     <?php endif; ?>
     
-    <!-- D4. امتیازآورترین‌ها -->
+    <!-- محبوب‌ترین‌ها (اسلایدر با کارت‌های افقی جدید) -->
     <?php if (!empty($highest_rated)): ?>
     <section class="content-section">
         <div class="section-header">
             <h2 class="section-title">محبوب‌ترین‌ها</h2>
+            <div class="carousel-nav">
+                <button class="nav-arrow prev-arrow" data-carousel="rated-carousel">&lt;</button>
+                <button class="nav-arrow next-arrow" data-carousel="rated-carousel">&gt;</button>
+            </div>
         </div>
-        <div class="highest-rated-grid">
+        <div class="works-carousel" id="rated-carousel">
             <?php foreach ($highest_rated as $index => $novel): ?>
-                <a href="novel_detail.php?id=<?php echo $novel['id']; ?>" class="rated-card">
-                    <span class="rated-card-rank">#<?php echo $index + 1; ?></span>
-                    <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="rated-card-img" loading="lazy">
-                    <div class="rated-card-info">
-                        <h3 class="rated-card-title"><?php echo htmlspecialchars($novel['title']); ?></h3>
-                        <span class="rated-card-rating">★ <?php echo htmlspecialchars($novel['rating']); ?></span>
-                    </div>
-                </a>
+                <div class="rated-slide">
+                    <a href="novel_detail.php?id=<?php echo $novel['id']; ?>" class="rated-card-horizontal">
+                        <div class="rated-card-rank-bg">
+                            <span>#</span><?php echo $index + 1; ?>
+                        </div>
+                        <img src="<?php echo htmlspecialchars($novel['cover_url']); ?>" alt="<?php echo htmlspecialchars($novel['title']); ?>" class="rated-card-img-h" loading="lazy">
+                        <div class="rated-card-info-h">
+                            <h3 class="rated-card-title-h"><?php echo htmlspecialchars($novel['title']); ?></h3>
+                            <div class="rated-card-meta-h">
+                                <span class="badge type-badge"><?php echo $type_persian[$novel['type']]; ?></span>
+                                <span class="badge rating-badge">★ <?php echo htmlspecialchars($novel['rating']); ?></span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
             <?php endforeach; ?>
         </div>
     </section>
