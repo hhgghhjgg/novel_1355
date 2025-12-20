@@ -1,192 +1,593 @@
-/* detail-style.css */
-
 /*
 =====================================================
-    NovelWorld - Detail Page Stylesheet (Unabridged)
-    Version: 1.3 (Final, All Features)
+    NovelWorld - Detail Page Styles (FINAL & COMPLETE)
+    Version: 5.1 (Webnovel / ReaperScans Style)
 =====================================================
 */
 
-/* --- گام ۱: متغیرهای رنگی و استایل‌های پایه --- */
+/* --- 1. متغیرهای رنگی و تنظیمات پایه --- */
 :root {
-    --bg-color: #13110B;
-    --surface-color: #1c1a14;
-    --primary-color: #FFC107;
-    --text-color: #f0f0f0;
-    --text-secondary-color: #a0a0a0;
-    --border-color: #2f2c21;
-    --danger-color: #d32f2f;
+    --gold: #F5D020;           /* رنگ اصلی (طلایی) */
+    --gold-hover: #e0be1d;     /* رنگ هاور طلایی */
+    --dark-bg: #000000;        /* پس‌زمینه اصلی */
+    --card-bg: #121212;        /* پس‌زمینه کارت‌ها */
+    --text-main: #ffffff;      /* متن اصلی */
+    --text-muted: #a0a0a0;     /* متن ثانویه */
+    --border: #2a2a2a;         /* رنگ حاشیه */
     --font-family: 'Vazirmatn', sans-serif;
 }
 
 body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
+    background-color: var(--dark-bg);
+    color: var(--text-main);
     font-family: var(--font-family);
     margin: 0;
-    direction: rtl;
+    padding: 0;
 }
 
-.detail-container {
-    max-width: 900px;
+a { text-decoration: none; color: inherit; }
+ul { list-style: none; padding: 0; margin: 0; }
+
+.container {
+    max-width: 1200px;
     margin: 0 auto;
-    padding-bottom: 50px;
+    padding: 0 20px;
 }
 
-/* --- گام ۲: بخش Hero --- */
-.hero-section {
+/* --- 2. هدر ایمرسیو (Immersive Header) --- */
+.immersive-header {
     position: relative;
-    height: 400px;
-    background-size: cover;
-    background-position: center;
-    border-radius: 0 0 20px 20px;
+    width: 100%;
+    min-height: 500px; /* ارتفاع مناسب برای نمایش کامل */
+    margin-top: -70px; /* کشیدن به زیر نوار ناوبری اصلی */
+    padding-top: 100px;
     overflow: hidden;
     display: flex;
-    align-items: flex-end;
+    align-items: flex-end; /* چسباندن محتوا به پایین */
 }
-.hero-overlay {
+
+/* پس‌زمینه بلور شده */
+.header-bg {
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(to top, rgba(19,17,11,1) 20%, rgba(19,17,11,0.5) 70%, rgba(19,17,11,0.2) 100%);
-    backdrop-filter: blur(8px);
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(25px) brightness(0.35); /* بلور زیاد و تیره */
+    transform: scale(1.2); /* بزرگنمایی برای حذف حاشیه‌های سفید بلور */
+    z-index: 0;
 }
-.hero-content {
+
+/* لایه گرادینت برای خوانایی */
+.header-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(to top, var(--dark-bg) 10%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.3) 100%);
+    z-index: 1;
+}
+
+.header-content {
     position: relative;
     z-index: 2;
     display: flex;
-    align-items: flex-end;
-    gap: 25px;
-    padding: 30px;
+    gap: 40px;
     width: 100%;
+    padding-bottom: 50px;
+    align-items: flex-end;
 }
-.hero-cover-img {
-    width: 180px;
-    height: 260px;
-    object-fit: cover;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    border: 2px solid var(--border-color);
+
+/* --- 3. کاور کتاب و بج رتبه --- */
+.book-cover-wrapper {
+    position: relative;
     flex-shrink: 0;
+    width: 240px;
+    border-radius: 12px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.7); /* سایه عمیق */
+    transition: transform 0.3s ease;
 }
-.type-badge {
-    background-color: var(--primary-color);
-    color: var(--bg-color);
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    display: inline-block;
-    margin-bottom: 10px;
+
+.book-cover-wrapper:hover {
+    transform: scale(1.02);
 }
-.hero-title {
-    font-size: 2.8rem;
+
+.book-cover {
+    width: 100%;
+    border-radius: 12px;
+    display: block;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.rank-badge {
+    position: absolute;
+    top: -15px; 
+    right: -15px;
+    background: var(--gold);
+    color: #000;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     font-weight: 800;
-    text-shadow: 1px 1px 15px rgba(0,0,0,0.7);
-    margin: 0;
-    word-break: break-word; /* برای جلوگیری از شکستن UI با عناوین طولانی */
+    font-size: 0.9rem;
+    box-shadow: 0 5px 20px rgba(245, 208, 32, 0.5);
+    border: 4px solid var(--dark-bg);
+    z-index: 3;
 }
-.hero-subtitle {
+.rank-badge .material-symbols-outlined { font-size: 20px; margin-bottom: -2px; }
+
+/* --- 4. اطلاعات کتاب (متادیتا) --- */
+.book-info {
+    flex-grow: 1;
+    color: white;
+    display: flex;
+    flex-direction: column;
+}
+
+.book-title {
+    font-size: 3.5rem;
+    font-weight: 900;
+    margin: 0 0 15px 0;
+    line-height: 1.1;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    background: linear-gradient(to bottom, #fff, #ddd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.book-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px;
+    margin-bottom: 30px;
+    color: var(--text-muted);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.meta-item .icon { font-size: 22px; color: var(--gold); }
+
+/* --- 5. گرید آمار (امتیاز، چپتر، بازدید) --- */
+.book-stats-grid {
+    display: flex;
+    gap: 50px;
+    margin-bottom: 30px;
+    padding: 20px 0;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding-right: 20px; /* کمی فاصله از راست */
+}
+
+.stat-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.stat-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: 1px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 5px;
+}
+
+/* --- 6. تگ‌ها (ژانرها) --- */
+.book-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 35px;
+}
+
+.tag-pill {
+    background: rgba(255,255,255,0.08);
+    color: var(--text-muted);
+    padding: 6px 18px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.tag-pill:hover {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border-color: var(--gold);
+    transform: translateY(-2px);
+}
+
+/* --- 7. نوار دکمه‌های عملیات (Action Bar) --- */
+.action-bar {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.btn-read-main {
+    background: var(--gold);
+    color: #000;
+    padding: 14px 50px;
+    border-radius: 50px;
+    font-weight: 800;
     font-size: 1.2rem;
-    color: var(--text-secondary-color);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 25px rgba(245, 208, 32, 0.4);
+}
+
+.btn-read-main:hover {
+    transform: translateY(-3px) scale(1.02);
+    background: var(--gold-hover);
+    box-shadow: 0 0 40px rgba(245, 208, 32, 0.6);
+}
+
+.btn-icon {
+    width: 55px; height: 55px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+    background: rgba(255,255,255,0.25);
+    transform: scale(1.1);
+}
+
+.btn-icon.added {
+    color: var(--gold);
+    background: rgba(245, 208, 32, 0.15);
+    border-color: var(--gold);
+    box-shadow: 0 0 15px rgba(245, 208, 32, 0.2);
+}
+
+/* --- 8. بدنه محتوا و تب‌ها --- */
+.content-body {
+    margin-top: 40px;
+    margin-bottom: 80px;
+}
+
+.tabs-nav {
+    display: flex;
+    gap: 40px;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 40px;
+    position: relative;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    font-weight: 500;
+    padding: 15px 0;
+    cursor: pointer;
+    position: relative;
+    font-family: inherit;
+    transition: color 0.3s ease;
+}
+
+.tab-btn:hover { color: var(--text-main); }
+
+.tab-btn.active {
+    color: var(--text-main);
+    font-weight: 800;
+}
+
+/* خط زیر تب فعال */
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0; width: 100%;
+    height: 4px;
+    background: var(--gold);
+    border-radius: 4px 4px 0 0;
+    box-shadow: 0 -2px 10px rgba(245, 208, 32, 0.5);
+}
+
+/* انیمیشن محتوای تب */
+.tab-content {
+    display: none;
+    animation: fadeInSlide 0.4s ease forwards;
+}
+.tab-content.active { display: block; }
+
+@keyframes fadeInSlide {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- 9. تب درباره (Synopsis) --- */
+.synopsis-card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 30px;
+    border: 1px solid var(--border);
+}
+
+.synopsis-card h3 {
+    margin-top: 0;
+    font-size: 1.5rem;
+    color: var(--gold);
+    margin-bottom: 20px;
+}
+
+.synopsis-text {
+    line-height: 2;
+    font-size: 1.1rem;
+    color: #d0d0d0;
+    text-align: justify;
+}
+
+/* --- 10. لیست چپترها --- */
+.author-tools { margin-bottom: 20px; }
+
+.chapter-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); /* گرید هوشمند */
+    gap: 15px;
+}
+
+.chapter-row {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    padding: 18px 25px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--text-main);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.chapter-row:hover {
+    border-color: var(--gold);
+    transform: translateY(-3px);
+    background: #181818;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.chapter-row.locked {
     opacity: 0.8;
 }
 
-/* --- گام ۳: پنل اطلاعات --- */
-.info-panel {
-    background-color: var(--surface-color);
+.ch-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ch-num {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.ch-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+}
+
+.ch-meta {
+    text-align: left;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.ch-lock {
+    color: var(--gold);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    background: rgba(245, 208, 32, 0.15);
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(245, 208, 32, 0.3);
+}
+
+/* --- 11. نظرات --- */
+.comment-input-box textarea {
+    width: 100%;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: white;
+    padding: 20px;
     border-radius: 12px;
-    padding: 25px;
-    margin: -50px 30px 0 30px;
-    position: relative;
-    z-index: 3;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    font-family: inherit;
+    font-size: 1rem;
+    resize: vertical;
+    transition: border 0.3s;
 }
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+
+.comment-input-box textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+}
+
+.btn-send-comment {
+    background: var(--gold);
+    border: none;
+    padding: 10px 30px;
+    border-radius: 8px;
+    font-weight: 700;
+    margin-top: 15px;
+    cursor: pointer;
+    float: left; /* دکمه سمت چپ */
+    transition: 0.2s;
+}
+.btn-send-comment:hover { background: var(--gold-hover); }
+
+.comments-list { clear: both; padding-top: 40px; }
+
+.comment-card {
+    display: flex;
     gap: 20px;
-    text-align: center;
     margin-bottom: 25px;
+    padding: 20px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border);
 }
-.info-item span { display: block; font-size: 0.9rem; color: var(--text-secondary-color); margin-bottom: 5px; }
-.info-item strong { font-size: 1.1rem; font-weight: 700; }
-.genres-box { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 30px; border-top: 1px solid var(--border-color); padding-top: 25px; }
-.genre-tag { background-color: var(--border-color); padding: 6px 15px; border-radius: 20px; font-size: 0.9rem; }
-.action-buttons { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
-.btn { text-decoration: none; padding: 12px 25px; border-radius: 8px; font-weight: 700; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid transparent; cursor: pointer;}
-.btn-primary { background-color: var(--primary-color); color: var(--bg-color); }
-.btn-primary:hover { background-color: #ffd54f; }
-.btn-secondary { background-color: transparent; border-color: var(--border-color); color: var(--text-color); }
-.btn-secondary:hover { background-color: var(--border-color); }
-.btn-danger { background-color: var(--danger-color); color: white; }
-.btn-danger:hover { background-color: #c62828; }
 
-/* --- گام ۴: سیستم تب‌بندی --- */
-.tab-system { padding: 30px; }
-.tab-links { display: flex; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
-.tab-link { background: none; border: none; color: var(--text-secondary-color); font-family: var(--font-family); font-size: 1.1rem; font-weight: 500; padding: 10px 20px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s ease; }
-.tab-link:hover { color: var(--text-color); }
-.tab-link.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 700; }
-.tab-content { display: none; line-height: 1.8; }
-.tab-content.active { display: block; }
+.user-avatar-placeholder {
+    width: 50px; height: 50px;
+    background: #2a2a2a;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: var(--gold);
+    flex-shrink: 0;
+    border: 2px solid var(--border);
+}
 
-/* --- گام ۵: لیست چپترها و ابزارهای نویسنده --- */
-.author-actions-header { margin-bottom: 20px; }
-.btn-add-chapter { display: inline-flex; align-items: center; gap: 8px; background-color: var(--primary-color); color: var(--bg-color); padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 700; }
-.chapter-list { list-style: none; padding: 0; }
-.chapter-item { display: flex; justify-content: space-between; align-items: center; background-color: var(--surface-color); border-radius: 8px; margin-bottom: 10px; gap: 10px; padding: 0 15px; }
-.chapter-item > a { flex-grow: 1; padding: 15px 0; text-decoration: none; color: var(--text-color); }
-.status-indicator { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.status-indicator.status-pending { background-color: #ffa000; }
-.status-indicator.status-rejected { background-color: #d32f2f; }
-.status-indicator.status-approved { background-color: #43a047; }
+.comment-content { flex-grow: 1; }
 
-.chapter-actions-menu { position: relative; }
-.menu-toggle-btn { background: none; border: none; color: var(--text-secondary-color); cursor: pointer; font-size: 1.5rem; padding: 0 10px; line-height: 1; border-radius: 50%; transition: background-color 0.2s; }
-.menu-toggle-btn:hover { background-color: var(--border-color); }
-.menu-dropdown { display: none; position: absolute; left: 0; top: 100%; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 10; width: 120px; overflow: hidden; }
-.chapter-actions-menu:hover .menu-dropdown { display: block; }
-.menu-dropdown a { display: block; padding: 10px 15px; color: var(--text-color); text-decoration: none; font-size: 0.9rem; }
-.menu-dropdown a:hover { background-color: var(--border-color); }
-.menu-dropdown a.delete-link { color: #ff8a8a; }
-.menu-dropdown a.delete-link:hover { background-color: rgba(255, 77, 77, 0.1); color: var(--danger-color); }
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 10px;
+}
 
-/* --- گام ۶: استایل بخش نظرات --- */
-.comment-form-box { background-color: var(--surface-color); padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid var(--border-color); }
-.comment-form-box h3 { margin-top: 0; margin-bottom: 15px; }
-.comment-form-box textarea { width: 100%; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; color: var(--text-color); font-family: var(--font-family); resize: vertical; min-height: 80px; }
-.form-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-.spoiler-box { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--text-secondary-color); cursor: pointer; }
-.comments-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
-.comments-section-header select { background-color: var(--surface-color); border: 1px solid var(--border-color); color: var(--text-color); padding: 5px 10px; border-radius: 6px; font-family: var(--font-family); }
-.comment-box { background-color: var(--surface-color); border-radius: 12px; padding: 15px 20px; margin-bottom: 15px; }
-.comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.username { font-weight: 700; color: var(--text-color); }
-.timestamp { font-size: 0.8rem; color: var(--text-secondary-color); }
-.comment-body { line-height: 1.7; word-wrap: break-word; }
-.comment-body.spoiler { background-color: var(--text-secondary-color); color: var(--text-secondary-color); border-radius: 6px; padding: 5px; cursor: pointer; transition: all 0.2s ease; user-select: none; }
-.comment-body.spoiler.revealed { background-color: transparent; color: var(--text-color); cursor: default; user-select: text; }
-.author-badge { background-color: var(--primary-color); color: var(--bg-color); font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; font-weight: 700; margin-right: 8px; }
-.login-prompt { text-align: center; padding: 20px; background-color: var(--surface-color); border-radius: 12px; }
-.comment-footer { margin-top: 10px; }
-.actions { display: flex; gap: 15px; align-items: center; }
-.action-btn { background: none; border: none; color: var(--text-secondary-color); cursor: pointer; font-family: var(--font-family); font-size: 0.9rem; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease; }
-.action-btn:hover { color: var(--text-color); }
-.action-btn svg { width: 20px; height: 20px; fill: currentColor; }
-.action-btn.action-success { color: var(--primary-color) !important; transform: scale(1.1); }
-.replies-container { margin-top: 15px; padding-right: 25px; border-right: 2px solid var(--border-color); }
-.comment-box.is-reply { background-color: var(--bg-color); }
-.reply-form-box { margin-top: 15px; }
-.success-box, .error-box { padding: 15px; margin-bottom: 20px; border-radius: 8px; border: 1px solid; text-align: center; }
+.c-user { font-weight: 700; color: var(--gold); font-size: 1.1rem; }
+.c-date { font-size: 0.85rem; color: var(--text-muted); }
+.c-text { line-height: 1.7; color: #ddd; }
 
-/* --- گام ۷: واکنش‌گرایی --- */
-@media (max-width: 600px) {
-    .hero-section { height: auto; }
-    .hero-content { flex-direction: column; align-items: center; text-align: center; padding: 20px; gap: 15px; }
-    .hero-cover-img { margin-top: 30px; width: 150px; height: 220px; }
-    .hero-title { font-size: 2rem; }
-    .info-panel { margin: -50px 15px 0 15px; }
-    .tab-system { padding: 20px 15px; }
-    .form-footer { flex-direction: column; align-items: flex-start; gap: 15px;}
-    .form-footer .btn { width: 100%; text-align: center; }
+/* --- 12. واکنش‌گرایی (Mobile) --- */
+@media (max-width: 768px) {
+    /* تنظیم هدر برای موبایل */
+    .immersive-header {
+        align-items: center; /* مرکزچین عمودی */
+        padding-top: 80px;
     }
+
+    .header-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    /* کاور کوچکتر در موبایل */
+    .book-cover-wrapper {
+        width: 160px;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.8);
+    }
+
+    .book-info {
+        align-items: center;
+        width: 100%;
+    }
+
+    .book-title { font-size: 2rem; margin-top: 15px; }
+
+    .book-meta-row {
+        justify-content: center;
+        gap: 15px;
+        font-size: 0.9rem;
+    }
+
+    .book-stats-grid {
+        width: 100%;
+        justify-content: space-around;
+        gap: 10px;
+        background: rgba(255,255,255,0.05);
+    }
+    
+    .stat-box { align-items: center; }
+    .stat-value { font-size: 1.3rem; }
+
+    .book-tags { justify-content: center; }
+
+    /* منوی چسبان پایین (Sticky Footer Action Bar) */
+    .action-bar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: rgba(18, 18, 18, 0.95); /* تقریبا مات */
+        padding: 12px 20px;
+        z-index: 999;
+        justify-content: space-between;
+        border-top: 1px solid var(--border);
+        backdrop-filter: blur(15px); /* بلور شیشه‌ای */
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+    }
+    
+    /* دکمه شروع خواندن تمام عرض */
+    .btn-read-main {
+        flex-grow: 1;
+        justify-content: center;
+        padding: 12px;
+        font-size: 1rem;
+    }
+    
+    /* دکمه‌های آیکونی */
+    .btn-icon {
+        width: 48px; height: 48px;
+        background: transparent;
+        border: 1px solid var(--border);
+    }
+
+    /* فاصله پایین صفحه برای دیده شدن پشت منوی چسبان */
+    .content-body {
+        padding-bottom: 90px;
+    }
+
+    /* اسکرول افقی برای تب‌ها در موبایل */
+    .tabs-nav {
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 0;
+        gap: 20px;
+        justify-content: flex-start; /* شروع از راست */
+    }
+    
+    .tab-btn {
+        padding: 15px 10px;
+        flex-shrink: 0;
+    }
+
+    /* لیست چپتر تک‌ستونی */
+    .chapter-list-grid {
+        grid-template-columns: 1fr;
+    }
+}
