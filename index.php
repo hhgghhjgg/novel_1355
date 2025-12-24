@@ -1,149 +1,187 @@
 <?php
 /*
 =====================================================
-    NovelWorld - Main Index Page (Theme: NovelKhone)
-    Version: 6.1 (Fixed PHP 8.2 Deprecation Error)
+    NovelWorld - Main Index Page (FINAL INTEGRATED)
+    Version: 8.0 (Original HTML + Dynamic Backend)
 =====================================================
 */
 
+// فعال‌سازی نمایش خطاها برای دیباگ (در صورت وجود مشکل)
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require_once 'header.php'; // اتصال به دیتابیس
 
-// --- توابع کمکی (اصلاح شده برای رفع ارور) ---
+// --- توابع کمکی ---
 function time_elapsed_string($datetime, $full = false) {
-    $now = new DateTime;
-    $ago = new DateTime($datetime);
-    $diff = $now->diff($ago);
+    try {
+        $now = new DateTime;
+        $ago = new DateTime($datetime);
+        $diff = $now->diff($ago);
 
-    // محاسبه دستی هفته‌ها برای جلوگیری از ارور PHP 8.2
-    $weeks = floor($diff->d / 7);
-    $days = $diff->d - ($weeks * 7);
+        $weeks = floor($diff->d / 7);
+        $days = $diff->d - ($weeks * 7);
 
-    $string = array(
-        'y' => $diff->y ? $diff->y . ' سال' : null,
-        'm' => $diff->m ? $diff->m . ' ماه' : null,
-        'w' => $weeks > 0 ? $weeks . ' هفته' : null,
-        'd' => $days > 0 ? $days . ' روز' : null,
-        'h' => $diff->h ? $diff->h . ' ساعت' : null,
-        'i' => $diff->i ? $diff->i . ' دقیقه' : null,
-        's' => $diff->s ? $diff->s . ' ثانیه' : null,
-    );
+        $string = array(
+            'y' => $diff->y ? $diff->y . ' سال' : null,
+            'm' => $diff->m ? $diff->m . ' ماه' : null,
+            'w' => $weeks > 0 ? $weeks . ' هفته' : null,
+            'd' => $days > 0 ? $days . ' روز' : null,
+            'h' => $diff->h ? $diff->h . ' ساعت' : null,
+            'i' => $diff->i ? $diff->i . ' دقیقه' : null,
+            's' => $diff->s ? $diff->s . ' ثانیه' : null,
+        );
 
-    // حذف مقادیر خالی
-    $string = array_filter($string);
-
-    if (!$string) return 'لحظاتی پیش';
-    
-    // دریافت اولین آیتم (بزرگترین بازه زمانی)
-    $string = array_slice($string, 0, 1);
-    return implode(', ', $string) . ' پیش';
+        $string = array_filter($string);
+        if (!$string) return 'لحظاتی پیش';
+        $string = array_slice($string, 0, 1);
+        return implode(', ', $string) . ' پیش';
+    } catch (Exception $e) {
+        return 'نامشخص';
+    }
 }
 
 function map_type_to_farsi($type) {
     $map = ['novel' => 'ناول', 'manhwa' => 'مانهوا', 'manga' => 'مانگا', 'korean' => 'کره‌ای', 'chinese' => 'چینی'];
-    return $map[strtolower($type)] ?? 'آسیایی';
+    return $map[strtolower($type ?? '')] ?? 'آسیایی';
 }
 
-// --- آماده‌سازی داده‌ها برای جاوااسکریپت (Backend Data Fetching) ---
-
-// 1. Hot Novels (بر اساس امتیاز)
-$hot_stmt = $conn->query("SELECT id, title, author, rating, cover_url, type, genres, status FROM novels ORDER BY rating DESC LIMIT 8");
+// --- متغیرهای پیش‌فرض ---
 $hot_data = [];
-while($row = $hot_stmt->fetch(PDO::FETCH_ASSOC)) {
-    $ch_count = $conn->query("SELECT COUNT(*) FROM chapters WHERE novel_id = {$row['id']}")->fetchColumn();
-    // تعیین بج (Badge)
-    $badge = null;
-    if ($row['status'] == 'completed') $badge = 'complete';
-    elseif ($row['rating'] >= 4.8) $badge = 'hot';
-    elseif ($row['rating'] >= 4.5) $badge = 'vip';
-
-    $hot_data[] = [
-        'title' => $row['title'],
-        'author' => $row['author'],
-        'rating' => $row['rating'],
-        'views' => 'Top', // اگر ستون بازدید ندارید
-        'chapters' => $ch_count,
-        'totalChapters' => $ch_count, 
-        'genres' => explode(',', $row['genres']),
-        'badge' => $badge,
-        'type' => map_type_to_farsi($row['type']),
-        'image' => $row['cover_url']
-    ];
-}
-
-// 2. New Novels (بر اساس تاریخ)
-$new_stmt = $conn->query("SELECT id, title, author, rating, cover_url, type, genres FROM novels ORDER BY created_at DESC LIMIT 8");
 $new_data = [];
-while($row = $new_stmt->fetch(PDO::FETCH_ASSOC)) {
-    $ch_count = $conn->query("SELECT COUNT(*) FROM chapters WHERE novel_id = {$row['id']}")->fetchColumn();
-    $new_data[] = [
-        'title' => $row['title'],
-        'author' => $row['author'],
-        'rating' => $row['rating'],
-        'views' => 'New',
-        'chapters' => $ch_count,
-        'totalChapters' => $ch_count,
-        'genres' => explode(',', $row['genres']),
-        'badge' => 'new',
-        'type' => map_type_to_farsi($row['type']),
-        'image' => $row['cover_url']
-    ];
-}
-
-// 3. Completed Novels
-$comp_stmt = $conn->query("SELECT id, title, author, rating, cover_url, type, genres FROM novels WHERE status = 'completed' LIMIT 8");
 $comp_data = [];
-while($row = $comp_stmt->fetch(PDO::FETCH_ASSOC)) {
-    $ch_count = $conn->query("SELECT COUNT(*) FROM chapters WHERE novel_id = {$row['id']}")->fetchColumn();
-    $comp_data[] = [
-        'title' => $row['title'],
-        'author' => $row['author'],
-        'rating' => $row['rating'],
-        'views' => 'Full',
-        'chapters' => $ch_count,
-        'totalChapters' => $ch_count,
-        'genres' => explode(',', $row['genres']),
-        'badge' => 'complete',
-        'type' => map_type_to_farsi($row['type']),
-        'image' => $row['cover_url']
-    ];
-}
-
-// 4. Latest Updates (چپترها)
-$update_stmt = $conn->query("
-    SELECT c.chapter_number, c.title as ch_title, c.published_at, n.title, n.cover_url, n.type 
-    FROM chapters c 
-    JOIN novels n ON c.novel_id = n.id 
-    WHERE c.status = 'approved' 
-    ORDER BY c.published_at DESC LIMIT 6
-");
 $updates_data = [];
-while($row = $update_stmt->fetch(PDO::FETCH_ASSOC)) {
-    $updates_data[] = [
-        'title' => $row['title'],
-        'chapter' => "فصل " . $row['chapter_number'],
-        'time' => time_elapsed_string($row['published_at']),
-        'views' => 'UP',
-        'type' => map_type_to_farsi($row['type']),
-        'isNew' => (strtotime($row['published_at']) > strtotime('-2 days')),
-        'image' => $row['cover_url']
-    ];
+$rank_data_weekly = [];
+$stats = ['novels' => 0, 'chapters' => 0, 'users' => 0];
+$featured = ['title' => 'عنوان پیش‌فرض', 'rating' => 5.0, 'cover_url' => 'https://m.media-amazon.com/images/I/81KvF7mJRCL._AC_UF1000,1000_QL80_.jpg', 'id' => 1, 'author' => 'نویسنده', 'genres' => 'اکشن'];
+
+// --- شروع عملیات دیتابیس ---
+try {
+    if ($conn) {
+        // 1. آمار کلی
+        $stats['novels'] = $conn->query("SELECT COUNT(*) FROM novels")->fetchColumn() ?: 0;
+        $stats['chapters'] = $conn->query("SELECT COUNT(*) FROM chapters")->fetchColumn() ?: 0;
+        $stats['users'] = $conn->query("SELECT COUNT(*) FROM users")->fetchColumn() ?: 0;
+
+        // 2. اثر ویژه (Featured)
+        $feat_stmt = $conn->query("SELECT * FROM novels ORDER BY rating DESC LIMIT 1");
+        if ($feat_stmt) {
+            $fetched_featured = $feat_stmt->fetch(PDO::FETCH_ASSOC);
+            if ($fetched_featured) $featured = $fetched_featured;
+        }
+
+        // 3. Hot Novels
+        $hot_stmt = $conn->query("SELECT id, title, author, rating, cover_url, type, genres, status FROM novels ORDER BY rating DESC LIMIT 8");
+        if ($hot_stmt) {
+            while($row = $hot_stmt->fetch(PDO::FETCH_ASSOC)) {
+                $ch_count = $conn->query("SELECT COUNT(*) FROM chapters WHERE novel_id = " . (int)$row['id'])->fetchColumn();
+                $badge = null;
+                if (($row['status'] ?? '') == 'completed') $badge = 'complete';
+                elseif (($row['rating'] ?? 0) >= 4.8) $badge = 'hot';
+                elseif (($row['rating'] ?? 0) >= 4.5) $badge = 'vip';
+
+                $hot_data[] = [
+                    'title' => $row['title'] ?? 'بدون عنوان',
+                    'author' => $row['author'] ?? 'ناشناس',
+                    'rating' => $row['rating'] ?? 0,
+                    'views' => 'Top',
+                    'chapters' => $ch_count,
+                    'totalChapters' => $ch_count > 0 ? $ch_count : 100,
+                    'genres' => !empty($row['genres']) ? explode(',', $row['genres']) : ['عمومی'],
+                    'badge' => $badge,
+                    'type' => map_type_to_farsi($row['type'] ?? ''),
+                    'image' => $row['cover_url'] ?? 'assets/default_cover.jpg'
+                ];
+            }
+        }
+
+        // 4. New Novels
+        $new_stmt = $conn->query("SELECT id, title, author, rating, cover_url, type, genres FROM novels ORDER BY created_at DESC LIMIT 8");
+        if ($new_stmt) {
+            while($row = $new_stmt->fetch(PDO::FETCH_ASSOC)) {
+                $ch_count = $conn->query("SELECT COUNT(*) FROM chapters WHERE novel_id = " . (int)$row['id'])->fetchColumn();
+                $new_data[] = [
+                    'title' => $row['title'] ?? 'بدون عنوان',
+                    'author' => $row['author'] ?? 'ناشناس',
+                    'rating' => $row['rating'] ?? 0,
+                    'views' => 'New',
+                    'chapters' => $ch_count,
+                    'totalChapters' => $ch_count > 0 ? $ch_count : 100,
+                    'genres' => !empty($row['genres']) ? explode(',', $row['genres']) : ['عمومی'],
+                    'badge' => 'new',
+                    'type' => map_type_to_farsi($row['type'] ?? ''),
+                    'image' => $row['cover_url'] ?? 'assets/default_cover.jpg'
+                ];
+            }
+        }
+
+        // 5. Completed Novels
+        $comp_stmt = $conn->query("SELECT id, title, author, rating, cover_url, type, genres FROM novels WHERE status = 'completed' LIMIT 8");
+        if ($comp_stmt) {
+            while($row = $comp_stmt->fetch(PDO::FETCH_ASSOC)) {
+                $ch_count = $conn->query("SELECT COUNT(*) FROM chapters WHERE novel_id = " . (int)$row['id'])->fetchColumn();
+                $comp_data[] = [
+                    'title' => $row['title'] ?? 'بدون عنوان',
+                    'author' => $row['author'] ?? 'ناشناس',
+                    'rating' => $row['rating'] ?? 0,
+                    'views' => 'Full',
+                    'chapters' => $ch_count,
+                    'totalChapters' => $ch_count,
+                    'genres' => !empty($row['genres']) ? explode(',', $row['genres']) : ['عمومی'],
+                    'badge' => 'complete',
+                    'type' => map_type_to_farsi($row['type'] ?? ''),
+                    'image' => $row['cover_url'] ?? 'assets/default_cover.jpg'
+                ];
+            }
+        }
+
+        // 6. Latest Updates
+        $update_sql = "
+            SELECT c.chapter_number, c.title as ch_title, c.published_at, n.title, n.cover_url, n.type 
+            FROM chapters c 
+            JOIN novels n ON c.novel_id = n.id 
+            WHERE c.status = 'approved' 
+            ORDER BY c.published_at DESC LIMIT 6
+        ";
+        $update_stmt = $conn->query($update_sql);
+        if ($update_stmt) {
+            while($row = $update_stmt->fetch(PDO::FETCH_ASSOC)) {
+                $published = $row['published_at'] ?? date('Y-m-d H:i:s');
+                $updates_data[] = [
+                    'title' => $row['title'] ?? 'بدون عنوان',
+                    'chapter' => "فصل " . ($row['chapter_number'] ?? '?'),
+                    'time' => time_elapsed_string($published),
+                    'views' => 'UP',
+                    'type' => map_type_to_farsi($row['type'] ?? ''),
+                    'isNew' => (strtotime($published) > strtotime('-2 days')),
+                    'image' => $row['cover_url'] ?? 'assets/default_cover.jpg'
+                ];
+            }
+        }
+
+        // 7. Rankings
+        $rank_stmt = $conn->query("SELECT title, cover_url, rating FROM novels ORDER BY rating DESC LIMIT 5");
+        if ($rank_stmt) {
+            while($row = $rank_stmt->fetch(PDO::FETCH_ASSOC)) {
+                $rank_data_weekly[] = [
+                    'title' => $row['title'] ?? 'بدون عنوان',
+                    'views' => 'Top',
+                    'votes' => $row['rating'] ?? 0,
+                    'trend' => 'up',
+                    'image' => $row['cover_url'] ?? 'assets/default_cover.jpg'
+                ];
+            }
+        }
+    }
+} catch (Exception $e) {
+    // خطا را فقط در کنسول لاگ می‌کنیم تا ظاهر صفحه خراب نشود
+    echo "<script>console.error('DB Error: " . addslashes($e->getMessage()) . "');</script>";
 }
 
-// 5. Rankings (رتبه‌بندی)
-$rank_stmt = $conn->query("SELECT title, cover_url, rating FROM novels ORDER BY rating DESC LIMIT 5");
-$rank_data_weekly = [];
-while($row = $rank_stmt->fetch(PDO::FETCH_ASSOC)) {
-    $rank_data_weekly[] = [
-        'title' => $row['title'],
-        'views' => 'Top',
-        'votes' => $row['rating'],
-        'trend' => 'up',
-        'image' => $row['cover_url']
-    ];
-}
-// برای پر کردن بقیه تب‌های رتبه‌بندی فعلاً از همین داده استفاده می‌کنیم
-$rank_data_trending = $rank_data_weekly;
-$rank_data_alltime = $rank_data_weekly;
+// پر کردن داده‌های خالی رتبه‌بندی
+$rank_data_trending = !empty($rank_data_weekly) ? $rank_data_weekly : [];
+$rank_data_alltime = !empty($rank_data_weekly) ? $rank_data_weekly : [];
 
 ?>
 <!DOCTYPE html>
