@@ -1,127 +1,153 @@
 <?php
-// header.php (نسخه کامل و نهایی)
-
 /*
 =====================================================
-    NovelWorld - Main Site Header
-    Version: 3.2 (Final, Corrected Icons)
+    NovelWorld - Header (Fixed & Modern)
+    Version: 4.0
 =====================================================
-    - این نسخه کامل شامل لینک صحیح به فونت آیکون Material Symbols
-      برای حل مشکل نمایش متنی آیکون‌ها است.
-    - از سیستم احراز هویت مبتنی بر کوکی و سشن دیتابیس استفاده می‌کند.
 */
 
-// --- گام ۱: فراخوانی فایل اتصال به دیتابیس ---
+// 1. اتصال به دیتابیس
 require_once 'db_connect.php';
 
-// --- گام ۲: آماده‌سازی متغیرهای پیش‌فرض کاربر ---
+// 2. شروع سشن (اگر قبلاً شروع نشده باشد)
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// 3. منطق احراز هویت (چک کردن کوکی و سشن)
 $is_logged_in = false;
 $user_id = null;
-$username = 'کاربر مهمان';
+$username = 'مهمان';
+$user_avatar = 'assets/default_avatar.png'; // مسیر پیش‌فرض آواتار
+$is_admin = false;
 
-// --- گام ۳: بررسی کوکی و احراز هویت کاربر ---
 if (isset($_COOKIE['user_session'])) {
     $session_id = $_COOKIE['user_session'];
-    
     try {
-        // کوئری برای پیدا کردن کاربر معتبر از طریق شناسه سشن
-        // ما جدول users و sessions را به هم متصل (JOIN) می‌کنیم
-        // و چک می‌کنیم که سشن منقضی نشده باشد (expires_at > NOW())
-        $stmt = $conn->prepare(
-            "SELECT u.id, u.username 
-             FROM users u 
-             JOIN sessions s ON u.id = s.user_id 
-             WHERE s.session_id = ? AND s.expires_at > NOW()"
-        );
+        $stmt = $conn->prepare("
+            SELECT u.id, u.username, u.role, u.profile_picture_url 
+            FROM users u 
+            JOIN sessions s ON u.id = s.user_id 
+            WHERE s.session_id = ? AND s.expires_at > NOW()
+        ");
         $stmt->execute([$session_id]);
-        $user = $stmt->fetch();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // اگر کاربری با این سشن معتبر پیدا شد، متغیرها را به‌روز می‌کنیم.
         if ($user) {
             $is_logged_in = true;
             $user_id = $user['id'];
             $username = htmlspecialchars($user['username']);
-        } else {
-            // اگر سشن نامعتبر یا منقضی بود، کوکی را پاک می‌کنیم.
-            setcookie('user_session', '', time() - 3600, '/');
+            if (!empty($user['profile_picture_url'])) {
+                $user_avatar = htmlspecialchars($user['profile_picture_url']);
+            }
+            if ($user['role'] === 'admin') {
+                $is_admin = true;
+            }
         }
     } catch (PDOException $e) {
-        // در صورت بروز خطای دیتابیس، کاربر لاگین نشده باقی می‌ماند.
-        // بهتر است خطا را برای بررسی‌های بعدی لاگ کنیم.
-        error_log("Header Auth Check DB Error: " . $e->getMessage());
+        // خطا را نادیده می‌گیریم تا سایت بالا بیاید (به عنوان مهمان)
     }
 }
-
-
-// --- گام ۴: رندر کردن بخش HTML ---
 ?>
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NovelWorld - دنیای ناول</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="header-style.css"> 
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
 
-    <!-- *** این خط برای نمایش صحیح آیکون‌ها ضروری است *** -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
-</head>
-<body>
-    
-    <aside id="sidebar-menu" class="sidebar">
-        <div class="sidebar-header">
-            <div class="sidebar-profile-picture">
-                <span><?php echo $is_logged_in ? mb_substr($username, 0, 1, "UTF-8") : 'G'; ?></span>
-            </div>
-            <h4 class="sidebar-username"><?php echo $username; ?></h4>
-        </div>
-        
-        <div class="sidebar-content">
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <h5 class="nav-section-title">دسترسی سریع</h5>
-                    <a href="search.php" class="nav-link">
-                        <span>جستجو</span>
-                    </a>
-                    <?php if ($is_logged_in): ?>
-                        <a href="profile.php" class="nav-link">
-                            <span>پروفایل</span>
-                        </a>
-                    <?php else: ?>
-                        <a href="login.php" class="nav-link">
-                            <span>ورود / ثبت‌نام</span>
-                        </a>
-                    <?php endif; ?>
-                </div>
-                <div class="nav-section">
-                    <h5 class="nav-section-title">اطلاعات</h5>
-                    <a href="#" class="nav-link">
-                        <span>شرایط و قوانین</span>
-                    </a>
-                </div>
-                <?php if ($is_logged_in): ?>
-                    <div class="nav-section">
-                         <a href="logout.php" class="nav-link logout-link">
-                            <span>خروج از حساب</span>
-                        </a>
-                    </div>
-                <?php endif; ?>
-            </nav>
-        </div>
-    </aside>
-    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+<!-- شروع HTML هدر (نوار ناوبری) -->
+<!-- توجه: تگ‌های html و head و body در فایل index.php قرار دارند تا تداخل ایجاد نشود -->
 
-    <header class="main-header">
-        <nav class="navbar">
-            <a href="index.php" class="logo">Novel<span>World</span></a>
-            
-            <button id="hamburger-btn" class="hamburger-btn" aria-label="Open menu">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"></path></svg>
-            </button>
+<header id="header">
+    <div class="header-content">
+        <!-- لوگو -->
+        <a href="index.php" class="logo">
+            <div class="logo-icon"><i class="fas fa-book-open"></i></div>
+            <span class="logo-text">ناول‌خونه</span>
+        </a>
+
+        <!-- منوی وسط -->
+        <nav>
+            <a href="index.php" class="<?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>">
+                <i class="fas fa-home"></i> خانه
+            </a>
+            <a href="search.php"><i class="fas fa-compass"></i> کشف</a>
+            <a href="all_genres.php"><i class="fas fa-layer-group"></i> دسته‌بندی</a>
+            <?php if ($is_logged_in): ?>
+                <a href="library.php"><i class="fas fa-book-reader"></i> کتابخانه من</a>
+            <?php endif; ?>
         </nav>
-    </header>
-    
-    <div class="main-content">
-        <!-- محتوای اصلی هر صفحه در اینجا قرار می‌گیرد -->
+
+        <!-- دکمه‌های سمت چپ -->
+        <div class="header-actions">
+            <!-- جستجو -->
+            <form action="search.php" method="GET" class="search-box">
+                <input type="text" name="q" class="search-input" placeholder="جستجوی ناول...">
+                <button type="submit" class="search-btn"><i class="fas fa-search"></i></button>
+            </form>
+
+            <?php if ($is_logged_in): ?>
+                <!-- حالت لاگین شده: نمایش پروفایل و پنل -->
+                
+                <?php if ($is_admin): ?>
+                    <a href="admin/index.php" class="icon-btn" title="پنل مدیریت">
+                        <i class="fas fa-cogs"></i>
+                    </a>
+                <?php endif; ?>
+
+                <a href="dashboard/index.php" class="icon-btn" title="پنل نویسندگی">
+                    <i class="fas fa-pen-nib"></i>
+                </a>
+
+                <a href="profile.php" class="login-btn" style="background: rgba(99, 102, 241, 0.1); border: 1px solid var(--border-accent);">
+                    <img src="<?php echo $user_avatar; ?>" alt="Avatar" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                    <?php echo $username; ?>
+                </a>
+            <?php else: ?>
+                <!-- حالت مهمان: دکمه ورود -->
+                <a href="login.php" class="login-btn">
+                    <i class="fas fa-user"></i> ورود / عضویت
+                </a>
+            <?php endif; ?>
+
+            <!-- دکمه منوی موبایل -->
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- منوی موبایل (کشویی) -->
+<div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+<div class="mobile-menu" id="mobileMenu">
+    <div class="mobile-menu-header">
+        <a href="index.php" class="logo">
+            <div class="logo-icon" style="width:40px;height:40px;font-size:18px;">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <span class="logo-text" style="font-size:20px;">ناول‌خونه</span>
+        </a>
+        <button class="mobile-menu-close" id="mobileMenuClose">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <form action="search.php" method="GET" class="mobile-search">
+        <input type="text" name="q" placeholder="جستجوی ناول...">
+    </form>
+
+    <nav class="mobile-nav">
+        <a href="index.php" class="active"><i class="fas fa-home"></i> خانه</a>
+        <a href="search.php"><i class="fas fa-compass"></i> کشف کنید</a>
+        <a href="all_genres.php"><i class="fas fa-layer-group"></i> دسته‌بندی</a>
+        
+        <?php if ($is_logged_in): ?>
+            <a href="library.php"><i class="fas fa-book-reader"></i> کتابخانه من</a>
+            <a href="profile.php"><i class="fas fa-user"></i> پروفایل من</a>
+            <a href="dashboard/index.php"><i class="fas fa-pen"></i> پنل نویسندگی</a>
+            <?php if ($is_admin): ?>
+                <a href="admin/index.php"><i class="fas fa-cogs"></i> پنل مدیریت</a>
+            <?php endif; ?>
+            <a href="logout.php" style="color: #ff4d4d;"><i class="fas fa-sign-out-alt"></i> خروج</a>
+        <?php else: ?>
+            <a href="login.php"><i class="fas fa-sign-in-alt"></i> ورود به حساب</a>
+            <a href="register.php"><i class="fas fa-user-plus"></i> ثبت نام</a>
+        <?php endif; ?>
+    </nav>
+</div>
