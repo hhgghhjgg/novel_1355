@@ -2,39 +2,38 @@
 /*
 =====================================================
     NovelWorld - Main Index Page (Theme: NovelKhone)
-    Version: 6.0 (Exact Design - Dynamic Data)
+    Version: 6.1 (Fixed PHP 8.2 Deprecation Error)
 =====================================================
 */
 
 require_once 'header.php'; // اتصال به دیتابیس
 
-// --- توابع کمکی ---
+// --- توابع کمکی (اصلاح شده برای رفع ارور) ---
 function time_elapsed_string($datetime, $full = false) {
     $now = new DateTime;
     $ago = new DateTime($datetime);
     $diff = $now->diff($ago);
 
-    $diff->w = floor($diff->d / 7);
-    $diff->d -= $diff->w * 7;
+    // محاسبه دستی هفته‌ها برای جلوگیری از ارور PHP 8.2
+    $weeks = floor($diff->d / 7);
+    $days = $diff->d - ($weeks * 7);
 
     $string = array(
-        'y' => 'سال',
-        'm' => 'ماه',
-        'w' => 'هفته',
-        'd' => 'روز',
-        'h' => 'ساعت',
-        'i' => 'دقیقه',
-        's' => 'ثانیه',
+        'y' => $diff->y ? $diff->y . ' سال' : null,
+        'm' => $diff->m ? $diff->m . ' ماه' : null,
+        'w' => $weeks > 0 ? $weeks . ' هفته' : null,
+        'd' => $days > 0 ? $days . ' روز' : null,
+        'h' => $diff->h ? $diff->h . ' ساعت' : null,
+        'i' => $diff->i ? $diff->i . ' دقیقه' : null,
+        's' => $diff->s ? $diff->s . ' ثانیه' : null,
     );
-    foreach ($string as $k => &$v) {
-        if ($diff->$k) {
-            $v = $diff->$k . ' ' . $v;
-        } else {
-            unset($string[$k]);
-        }
-    }
+
+    // حذف مقادیر خالی
+    $string = array_filter($string);
 
     if (!$string) return 'لحظاتی پیش';
+    
+    // دریافت اولین آیتم (بزرگترین بازه زمانی)
     $string = array_slice($string, 0, 1);
     return implode(', ', $string) . ' پیش';
 }
@@ -44,34 +43,26 @@ function map_type_to_farsi($type) {
     return $map[strtolower($type)] ?? 'آسیایی';
 }
 
-// --- واکشی آمار کلی ---
-$stats = [
-    'novels' => $conn->query("SELECT COUNT(*) FROM novels")->fetchColumn(),
-    'chapters' => $conn->query("SELECT COUNT(*) FROM chapters")->fetchColumn(),
-    'users' => $conn->query("SELECT COUNT(*) FROM users")->fetchColumn(),
-];
-
-// --- واکشی اثر ویژه (Featured) - مثلاً پربازدیدترین ---
-$featured = $conn->query("SELECT * FROM novels ORDER BY rating DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-// محاسبه درصد پیشرفت فرضی یا واقعی برای اثر ویژه
-$featured_chapters = $conn->query("SELECT COUNT(*) FROM chapters WHERE novel_id = {$featured['id']}")->fetchColumn();
-$featured_progress = 100; // فرض بر تکمیل بودن یا محاسبه نسبت به کل
-
-// --- آماده‌سازی داده‌ها برای جاوااسکریپت ---
+// --- آماده‌سازی داده‌ها برای جاوااسکریپت (Backend Data Fetching) ---
 
 // 1. Hot Novels (بر اساس امتیاز)
 $hot_stmt = $conn->query("SELECT id, title, author, rating, cover_url, type, genres, status FROM novels ORDER BY rating DESC LIMIT 8");
 $hot_data = [];
 while($row = $hot_stmt->fetch(PDO::FETCH_ASSOC)) {
     $ch_count = $conn->query("SELECT COUNT(*) FROM chapters WHERE novel_id = {$row['id']}")->fetchColumn();
-    $badge = ($row['status'] == 'completed') ? 'complete' : (($row['rating'] > 4.8) ? 'hot' : null);
+    // تعیین بج (Badge)
+    $badge = null;
+    if ($row['status'] == 'completed') $badge = 'complete';
+    elseif ($row['rating'] >= 4.8) $badge = 'hot';
+    elseif ($row['rating'] >= 4.5) $badge = 'vip';
+
     $hot_data[] = [
         'title' => $row['title'],
         'author' => $row['author'],
         'rating' => $row['rating'],
-        'views' => 'N/A', // اگر ستون بازدید ندارید
+        'views' => 'Top', // اگر ستون بازدید ندارید
         'chapters' => $ch_count,
-        'totalChapters' => $ch_count, // یا ستون total_chapters
+        'totalChapters' => $ch_count, 
         'genres' => explode(',', $row['genres']),
         'badge' => $badge,
         'type' => map_type_to_farsi($row['type']),
@@ -88,9 +79,9 @@ while($row = $new_stmt->fetch(PDO::FETCH_ASSOC)) {
         'title' => $row['title'],
         'author' => $row['author'],
         'rating' => $row['rating'],
-        'views' => 'N/A',
+        'views' => 'New',
         'chapters' => $ch_count,
-        'totalChapters' => 100, // Placeholder
+        'totalChapters' => $ch_count,
         'genres' => explode(',', $row['genres']),
         'badge' => 'new',
         'type' => map_type_to_farsi($row['type']),
@@ -107,7 +98,7 @@ while($row = $comp_stmt->fetch(PDO::FETCH_ASSOC)) {
         'title' => $row['title'],
         'author' => $row['author'],
         'rating' => $row['rating'],
-        'views' => 'N/A',
+        'views' => 'Full',
         'chapters' => $ch_count,
         'totalChapters' => $ch_count,
         'genres' => explode(',', $row['genres']),
@@ -131,14 +122,14 @@ while($row = $update_stmt->fetch(PDO::FETCH_ASSOC)) {
         'title' => $row['title'],
         'chapter' => "فصل " . $row['chapter_number'],
         'time' => time_elapsed_string($row['published_at']),
-        'views' => 'N/A',
+        'views' => 'UP',
         'type' => map_type_to_farsi($row['type']),
-        'isNew' => (strtotime($row['published_at']) > strtotime('-1 day')),
+        'isNew' => (strtotime($row['published_at']) > strtotime('-2 days')),
         'image' => $row['cover_url']
     ];
 }
 
-// 5. Rankings (شبیه‌سازی بر اساس امتیاز و تصادفی برای تنوع)
+// 5. Rankings (رتبه‌بندی)
 $rank_stmt = $conn->query("SELECT title, cover_url, rating FROM novels ORDER BY rating DESC LIMIT 5");
 $rank_data_weekly = [];
 while($row = $rank_stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -150,7 +141,7 @@ while($row = $rank_stmt->fetch(PDO::FETCH_ASSOC)) {
         'image' => $row['cover_url']
     ];
 }
-// کپی برای بقیه تب‌ها جهت پر کردن (در واقعیت کوئری‌های متفاوت می‌زنید)
+// برای پر کردن بقیه تب‌های رتبه‌بندی فعلاً از همین داده استفاده می‌کنیم
 $rank_data_trending = $rank_data_weekly;
 $rank_data_alltime = $rank_data_weekly;
 
