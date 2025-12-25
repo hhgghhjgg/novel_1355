@@ -1,45 +1,46 @@
-# استفاده از ایمیج رسمی PHP با Apache
+# استفاده از نسخه رسمی PHP Apache
 FROM php:8.2-apache
 
-# نصب پکیج‌های سیستمی مورد نیاز (برای Postgres و Zip)
+# نصب پیش‌نیازها و اکستنشن‌های دیتابیس
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     libzip-dev \
     unzip \
     git \
+    && docker-php-ext-install pdo pdo_pgsql zip \
     && rm -rf /var/lib/apt/lists/*
 
-# نصب اکستنشن‌های PHP مورد نیاز پروژه شما
-# نکته: چون در db_connect.php از pgsql استفاده کردید، pdo_pgsql ضروری است
-RUN docker-php-ext-install pdo pdo_pgsql zip
-
-# فعال‌سازی mod_rewrite برای هندل کردن URLها (حیاتی برای پروژه‌های PHP)
+# فعال‌سازی ماژول Rewrite
 RUN a2enmod rewrite
-
-# تنظیم پورت آپاچی برای Render
-# این دستور پورت پیش‌فرض 80 را با پورت محیطی Render جایگزین می‌کند
-RUN sed -i 's/80/${PORT:-80}/g' /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf
 
 # نصب کامپوزر
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# تنظیم دایرکتوری کاری
+# تنظیم دایرکتوری پروژه
 WORKDIR /var/www/html
 
-# کپی کردن فایل‌های کامپوزر و نصب وابستگی‌ها
-COPY composer.json ./
-# اگر composer.lock دارید آن را هم کپی کنید، اگر نه این خط را نادیده بگیرید
-# COPY composer.lock ./ 
-
-RUN composer install --no-dev --optimize-autoloader --prefer-dist
-
-# کپی کردن تمام فایل‌های پروژه به کانتینر
+# کپی کردن فایل‌ها
 COPY . .
 
-# تنظیم مجوزها برای کارکرد صحیح آپاچی
-RUN chown -R www-data:www-data /var/www/html
-RUN chmod -R 755 /var/www/html
+# نصب پکیج‌های PHP
+RUN composer install --no-dev --optimize-autoloader --prefer-dist
 
-# تغییر پورت در زمان اجرا (Entrypoint Script)
-# این بخش حیاتی است تا آپاچی با پورت داینامیک Render بالا بیاید
-CMD sed -i "s/80/$PORT/g" /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf && docker-php-entrypoint apache2-foreground
+# تنظیم دسترسی‌ها
+RUN chown -R www-data:www-data /var/www/html && chmod -R 755 /var/www/html
+
+# --- بخش مهم: ساخت اسکریپت استارت‌آپ ---
+# این اسکریپت چک می‌کند اگر متغیر PORT وجود نداشت، آن را برابر 80 قرار دهد
+# این جلوی ارور "Port must be specified" را می‌گیرد
+RUN echo '#!/bin/bash\n\
+if [ -z "$PORT" ]; then\n\
+    echo "PORT variable is empty, defaulting to 80"\n\
+    export PORT=80\n\
+fi\n\
+sed -i "s/80/$PORT/g" /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf\n\
+exec docker-php-entrypoint apache2-foreground' > /usr/local/bin/start.sh
+
+# قابل اجرا کردن اسکریپت
+RUN chmod +x /usr/local/bin/start.sh
+
+# اجرای نهایی
+CMD ["/usr/local/bin/start.sh"]
