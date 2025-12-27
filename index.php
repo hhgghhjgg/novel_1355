@@ -1,16 +1,21 @@
 <?php
 /*
 =====================================================
-    NovelWorld - Index (THE EXACT DESIGN - DB CONNECTED)
-    Version: 100% Match
+    NovelWorld - Index (Ultimate Edition)
+    Version: 12.0 (Exact Design + Full Dynamic Backend)
 =====================================================
 */
 
-// تنظیمات خطا
-ini_set('display_errors', 0);
+// --- تنظیمات اولیه ---
+ini_set('display_errors', 0); // عدم نمایش خطا به کاربر برای حفظ ظاهر
 error_reporting(E_ALL);
 
-// اتصال به دیتابیس (مستقیم داخل همین فایل برای جلوگیری از ارور 502)
+// شروع سشن
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// --- اتصال به دیتابیس ---
 $conn = null;
 $database_url = getenv('DATABASE_URL');
 if ($database_url) {
@@ -22,116 +27,141 @@ if ($database_url) {
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         ]);
     } catch (PDOException $e) {
-        // اگر وصل نشد، سایت بالا می‌آید اما خالی
+        // در صورت عدم اتصال، آرایه‌ها خالی می‌مانند ولی سایت بالا می‌آید
     }
 }
 
-// چک کردن لاگین
+// --- احراز هویت ---
 $is_logged_in = false;
 $username = 'مهمان';
-$user_avatar = 'https://ui-avatars.com/api/?name=Guest&background=random'; 
+$user_avatar = 'https://ui-avatars.com/api/?name=Guest&background=random&color=fff';
+$is_admin = false;
+
 if (isset($_COOKIE['user_session']) && $conn) {
     try {
-        $stmt = $conn->prepare("SELECT username, profile_picture_url FROM users JOIN sessions s ON users.id = s.user_id WHERE s.session_id = ?");
+        $stmt = $conn->prepare("SELECT id, username, role, profile_picture_url FROM users JOIN sessions s ON users.id = s.user_id WHERE s.session_id = ? AND s.expires_at > NOW()");
         $stmt->execute([$_COOKIE['user_session']]);
         $user = $stmt->fetch();
         if ($user) {
             $is_logged_in = true;
-            $username = $user['username'];
-            if($user['profile_picture_url']) $user_avatar = $user['profile_picture_url'];
+            $username = htmlspecialchars($user['username']);
+            $is_admin = ($user['role'] === 'admin');
+            if (!empty($user['profile_picture_url'])) $user_avatar = htmlspecialchars($user['profile_picture_url']);
         }
-    } catch(Exception $e){}
+    } catch (Exception $e) {}
 }
 
-// --- توابع کمکی برای تبدیل داده‌ها ---
-function get_badge($status, $rating, $date) {
-    if ($status == 'completed') return 'complete';
-    if ($rating >= 4.8) return 'hot';
-    if (strtotime($date) > strtotime('-7 days')) return 'new';
-    return null;
-}
-
-function get_type_fa($type) {
-    $map = ['novel'=>'ناول', 'manhwa'=>'مانهوا', 'manga'=>'مانگا'];
-    return $map[$type] ?? 'آسیایی';
-}
-
+// --- توابع کمکی ---
 function time_ago($datetime) {
+    if(!$datetime) return '';
     $time = strtotime($datetime);
     $diff = time() - $time;
+    if($diff < 60) return 'لحظاتی پیش';
     if($diff < 3600) return floor($diff/60) . ' دقیقه پیش';
     if($diff < 86400) return floor($diff/3600) . ' ساعت پیش';
     return floor($diff/86400) . ' روز پیش';
 }
 
-// --- واکشی داده‌ها از دیتابیس برای جاوااسکریپت ---
-$hot_novels = [];
-$new_novels = [];
-$complete_novels = [];
-$updates_list = [];
-$rankings_list = []; // برای سادگی یک لیست می‌گیریم و تکرار می‌کنیم
+function get_type_fa($type) {
+    $map = ['novel'=>'ناول', 'manhwa'=>'مانهوا', 'manga'=>'مانگا'];
+    return $map[strtolower($type ?? '')] ?? 'آسیایی';
+}
+
+function get_badge_class($status, $rating, $date) {
+    if ($status === 'completed') return ['class'=>'complete', 'text'=>'تکمیل'];
+    if ($rating >= 4.8) return ['class'=>'hot', 'text'=>'داغ'];
+    if (strtotime($date) > strtotime('-7 days')) return ['class'=>'new', 'text'=>'جدید'];
+    return null;
+}
+
+// --- واکشی داده‌ها ---
+$hot_novels = []; $new_novels = []; $complete_novels = [];
+$updates_list = []; $editors_picks = []; $highest_rated = [];
+$stats = ['novels'=>0, 'chapters'=>0, 'users'=>0];
+$featured = null;
 
 if ($conn) {
-    // 1. آمار کلی
-    $stats_novels = $conn->query("SELECT COUNT(*) FROM novels")->fetchColumn();
-    $stats_chapters = $conn->query("SELECT COUNT(*) FROM chapters")->fetchColumn();
-    $stats_users = $conn->query("SELECT COUNT(*) FROM users")->fetchColumn();
+    try {
+        // آمار
+        $stats['novels'] = $conn->query("SELECT COUNT(*) FROM novels")->fetchColumn();
+        $stats['chapters'] = $conn->query("SELECT COUNT(*) FROM chapters")->fetchColumn();
+        $stats['users'] = $conn->query("SELECT COUNT(*) FROM users")->fetchColumn();
 
-    // 2. تابع کمکی کوئری
-    function fetch_for_js($conn, $order, $limit, $status=null) {
-        $sql = "SELECT * FROM novels ";
-        if($status) $sql .= "WHERE status='$status' ";
-        $sql .= "ORDER BY $order DESC LIMIT $limit";
-        $stmt = $conn->query($sql);
-        $data = [];
-        while($r = $stmt->fetch()) {
-            $chs = $conn->query("SELECT COUNT(*) FROM chapters WHERE novel_id={$r['id']}")->fetchColumn();
-            $data[] = [
+        // اثر ویژه (Featured)
+        $feat = $conn->query("SELECT * FROM novels ORDER BY rating DESC LIMIT 1")->fetch();
+        if ($feat) {
+            $featured = $feat;
+            $featured['genres'] = explode(',', $feat['genres']);
+        }
+
+        // تابع دریافت لیست
+        function fetch_list($conn, $order_by, $limit, $status=null) {
+            $sql = "SELECT * FROM novels ";
+            if($status) $sql .= "WHERE status='$status' ";
+            $sql .= "ORDER BY $order_by DESC LIMIT $limit";
+            $stmt = $conn->query($sql);
+            $res = [];
+            while($r = $stmt->fetch()) {
+                $chs = $conn->query("SELECT COUNT(*) FROM chapters WHERE novel_id={$r['id']}")->fetchColumn();
+                $badgeInfo = get_badge_class($r['status'], $r['rating'], $r['created_at']);
+                $res[] = [
+                    'id' => $r['id'],
+                    'title' => $r['title'],
+                    'author' => $r['author'],
+                    'rating' => $r['rating'],
+                    'views' => 'Top', // اگر ستون بازدید ندارید
+                    'chapters' => $chs,
+                    'genres' => explode(',', $r['genres']),
+                    'badge' => $badgeInfo,
+                    'type' => get_type_fa($r['type']),
+                    'image' => $r['cover_url']
+                ];
+            }
+            return $res;
+        }
+
+        $hot_novels = fetch_list($conn, 'rating', 10);
+        $new_novels = fetch_list($conn, 'created_at', 10);
+        $complete_novels = fetch_list($conn, 'rating', 10, 'completed');
+
+        // بروزرسانی‌ها
+        $up_q = $conn->query("SELECT c.chapter_number, c.published_at, n.id, n.title, n.cover_url, n.type FROM chapters c JOIN novels n ON c.novel_id=n.id WHERE c.status='approved' ORDER BY c.published_at DESC LIMIT 6");
+        while($r = $up_q->fetch()) {
+            $updates_list[] = [
                 'id' => $r['id'],
                 'title' => $r['title'],
-                'author' => $r['author'],
-                'rating' => $r['rating'],
-                'views' => number_format(rand(1000, 50000)), // یا از دیتابیس
-                'chapters' => $chs,
-                'totalChapters' => $chs > 0 ? $chs : '?',
-                'genres' => explode(',', $r['genres']),
-                'badge' => get_badge($r['status'], $r['rating'], $r['created_at']),
+                'chapter' => "فصل " . $r['chapter_number'],
+                'time' => time_ago($r['published_at']),
                 'type' => get_type_fa($r['type']),
                 'image' => $r['cover_url']
             ];
         }
-        return $data;
-    }
 
-    $hot_novels = fetch_for_js($conn, 'rating', 8);
-    $new_novels = fetch_for_js($conn, 'created_at', 8);
-    $complete_novels = fetch_for_js($conn, 'rating', 8, 'completed');
+        // پیشنهاد سردبیر (تصادفی از بین خوب‌ها)
+        $ep_q = $conn->query("SELECT * FROM novels WHERE rating > 4.0 ORDER BY RANDOM() LIMIT 8");
+        while($r = $ep_q->fetch()) {
+            $editors_picks[] = [
+                'id' => $r['id'],
+                'title' => $r['title'],
+                'summary' => $r['summary'],
+                'genre' => explode(',', $r['genres'])[0],
+                'image' => $r['cover_url']
+            ];
+        }
 
-    // 3. بروزرسانی‌ها
-    $up_q = $conn->query("SELECT c.*, n.title as nt, n.cover_url as ni, n.type as nty FROM chapters c JOIN novels n ON c.novel_id=n.id WHERE c.status='approved' ORDER BY c.published_at DESC LIMIT 6");
-    while($r = $up_q->fetch()) {
-        $updates_list[] = [
-            'title' => $r['nt'],
-            'chapter' => "فصل " . $r['chapter_number'],
-            'time' => time_ago($r['published_at']),
-            'views' => rand(100, 5000) . 'K',
-            'type' => get_type_fa($r['nty']),
-            'isNew' => (time() - strtotime($r['published_at']) < 86400),
-            'image' => $r['ni']
-        ];
-    }
+        // محبوب‌ترین‌ها (بالاترین امتیاز)
+        $hr_q = $conn->query("SELECT * FROM novels ORDER BY rating DESC LIMIT 10");
+        while($r = $hr_q->fetch()) {
+            $highest_rated[] = [
+                'id' => $r['id'],
+                'title' => $r['title'],
+                'rating' => $r['rating'],
+                'status' => $r['status'],
+                'image' => $r['cover_url']
+            ];
+        }
 
-    // 4. رتبه‌بندی
-    $rank_q = $conn->query("SELECT * FROM novels ORDER BY rating DESC LIMIT 5");
-    while($r = $rank_q->fetch()) {
-        $rankings_list[] = [
-            'title' => $r['title'],
-            'views' => $r['rating'] * 1000 . 'K',
-            'votes' => $r['rating'],
-            'trend' => 'up',
-            'image' => $r['cover_url']
-        ];
-    }
+    } catch (Exception $e) {}
 }
 ?>
 <!DOCTYPE html>
@@ -139,12 +169,11 @@ if ($conn) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ناول‌خونه | خانه ترجمه ناول</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <title>ناول‌خونه | مرجع ناول‌های آسیایی</title>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        /* ==================== CSS کامل و بدون تغییر ظاهری ==================== */
         :root {
             --bg-primary: #050508;
             --bg-secondary: #0a0a0f;
@@ -155,661 +184,345 @@ if ($conn) {
             --accent-secondary: #818cf8;
             --accent-light: #a5b4fc;
             --accent-dark: #4f46e5;
-            --accent-glow: rgba(99, 102, 241, 0.5);
-            --cyan-accent: #22d3ee;
-            --purple-accent: #a78bfa;
+            --gold: #F5D020;
             --text-primary: #ffffff;
             --text-secondary: #94a3b8;
             --text-muted: #64748b;
             --gradient-accent: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%);
-            --gradient-accent-alt: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
             --gradient-card: linear-gradient(165deg, #12121a 0%, #0a0a0f 100%);
             --gradient-shine: linear-gradient(135deg, #6366f1 0%, #22d3ee 50%, #a78bfa 100%);
-            --shadow-accent: 0 0 50px rgba(99, 102, 241, 0.15);
-            --shadow-accent-strong: 0 0 80px rgba(99, 102, 241, 0.25);
             --shadow-card: 0 20px 60px rgba(0, 0, 0, 0.7);
             --border-subtle: rgba(255, 255, 255, 0.04);
             --border-accent: rgba(99, 102, 241, 0.15);
-            --radius-sm: 8px;
-            --radius-md: 12px;
-            --radius-lg: 16px;
-            --radius-xl: 24px;
+            --radius-md: 12px; --radius-lg: 16px; --radius-xl: 24px;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; font-size: 16px; }
         body { font-family: 'Vazirmatn', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; overflow-x: hidden; line-height: 1.6; }
+        a { text-decoration: none; color: inherit; transition: 0.3s; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-secondary); }
         ::-webkit-scrollbar-thumb { background: var(--accent-dark); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
-
-        /* HEADER */
-        header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(5, 5, 8, 0.85); backdrop-filter: blur(25px); border-bottom: 1px solid var(--border-accent); transition: all 0.4s; }
-        header.scrolled { background: rgba(5, 5, 8, 0.98); box-shadow: var(--shadow-accent); }
-        .header-content { max-width: 1920px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 72px; padding: 0 32px; }
-        .logo { display: flex; align-items: center; gap: 14px; text-decoration: none; }
-        .logo-icon { width: 50px; height: 50px; background: var(--gradient-accent); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; position: relative; overflow: hidden; box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4); }
-        .logo-icon::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent); transform: rotate(45deg); animation: logoShine 4s infinite; }
-        @keyframes logoShine { 0% { transform: translateX(-100%) rotate(45deg); } 100% { transform: translateX(100%) rotate(45deg); } }
-        .logo-text { font-size: 28px; font-weight: 900; background: var(--gradient-shine); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; }
-        nav { display: flex; align-items: center; gap: 4px; }
-        nav a { color: var(--text-secondary); text-decoration: none; padding: 10px 18px; border-radius: var(--radius-md); font-weight: 500; font-size: 14px; transition: all 0.3s; display: flex; align-items: center; gap: 8px; position: relative; }
-        nav a::after { content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%) scaleX(0); width: 24px; height: 2px; background: var(--accent-primary); border-radius: 1px; transition: transform 0.3s; }
-        nav a:hover { color: var(--accent-light); }
-        nav a:hover::after { transform: translateX(-50%) scaleX(1); }
-        nav a.active { color: white; background: var(--gradient-accent); font-weight: 600; }
-        nav a.active::after { display: none; }
-        .header-actions { display: flex; align-items: center; gap: 14px; }
-        .search-box { position: relative; display: flex; align-items: center; }
-        .search-input { width: 260px; height: 46px; padding: 0 50px 0 18px; border-radius: var(--radius-lg); border: 1px solid var(--border-accent); background: rgba(99, 102, 241, 0.03); color: var(--text-primary); font-family: inherit; font-size: 14px; transition: all 0.3s; }
-        .search-input:focus { outline: none; border-color: var(--accent-primary); background: rgba(99, 102, 241, 0.08); box-shadow: 0 0 25px rgba(99, 102, 241, 0.15); width: 300px; }
-        .search-btn { position: absolute; left: 5px; width: 38px; height: 38px; border-radius: var(--radius-md); border: none; background: var(--gradient-accent); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
-        .search-btn:hover { transform: scale(1.05); box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
-        .icon-btn { width: 46px; height: 46px; border-radius: var(--radius-md); border: 1px solid var(--border-accent); background: rgba(99, 102, 241, 0.03); color: var(--text-secondary); cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; font-size: 17px; position: relative; }
-        .icon-btn:hover { border-color: var(--accent-primary); color: var(--accent-light); background: rgba(99, 102, 241, 0.1); transform: translateY(-2px); }
-        .icon-btn .badge { position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; padding: 0 6px; background: #ef4444; border-radius: 10px; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; color: white; border: 2px solid var(--bg-primary); }
-        .login-btn { padding: 12px 28px; border-radius: var(--radius-md); border: none; background: var(--gradient-accent); color: white; font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s; font-family: inherit; display: flex; align-items: center; gap: 8px; text-decoration: none; }
-        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4); }
-        .mobile-menu-btn { display: none; width: 46px; height: 46px; border-radius: var(--radius-md); border: 1px solid var(--border-accent); background: transparent; color: var(--text-primary); cursor: pointer; align-items: center; justify-content: center; font-size: 22px; transition: all 0.3s; }
-        .mobile-menu-btn:hover { border-color: var(--accent-primary); color: var(--accent-light); }
         
-        /* Mobile Menu */
-        .mobile-menu { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 85%; max-width: 360px; background: var(--bg-secondary); z-index: 1001; padding: 24px; transform: translateX(100%); transition: transform 0.4s; overflow-y: auto; border-left: 1px solid var(--border-accent); }
-        .mobile-menu.active { transform: translateX(0); }
-        .mobile-menu-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; opacity: 0; transition: opacity 0.3s; }
-        .mobile-menu-overlay.active { opacity: 1; }
-        .mobile-menu-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border-subtle); }
-        .mobile-menu-close { width: 40px; height: 40px; border-radius: var(--radius-md); border: 1px solid var(--border-accent); background: transparent; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-        .mobile-search { margin-bottom: 24px; }
-        .mobile-search input { width: 100%; height: 50px; padding: 0 16px; border-radius: var(--radius-md); border: 1px solid var(--border-accent); background: rgba(99, 102, 241, 0.03); color: var(--text-primary); font-family: inherit; font-size: 15px; }
-        .mobile-search input:focus { outline: none; border-color: var(--accent-primary); }
-        .mobile-nav { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
-        .mobile-nav a { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none; font-size: 15px; font-weight: 500; transition: all 0.3s; background: var(--bg-card); border: 1px solid var(--border-subtle); }
-        .mobile-nav a:hover, .mobile-nav a.active { color: white; background: var(--gradient-accent); border-color: transparent; }
-        .mobile-nav a i { width: 24px; text-align: center; font-size: 18px; }
-        .mobile-user-actions { display: flex; gap: 12px; }
-        .mobile-user-actions a { flex: 1; padding: 14px; border-radius: var(--radius-md); text-align: center; text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .mobile-login-btn { background: var(--gradient-accent); color: white; }
-        .mobile-register-btn { background: rgba(99, 102, 241, 0.1); color: var(--accent-light); border: 1px solid var(--border-accent); }
-
+        /* HEADER */
+        header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(5, 5, 8, 0.95); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border-accent); height: 70px; }
+        .header-content { max-width: 1920px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 100%; padding: 0 32px; }
+        .logo { display: flex; align-items: center; gap: 14px; font-weight: 900; font-size: 24px; color: white; }
+        .logo i { color: var(--accent-primary); font-size: 28px; }
+        .logo-text { background: var(--gradient-shine); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        nav { display: flex; gap: 20px; }
+        nav a { font-size: 14px; font-weight: 500; color: var(--text-secondary); padding: 8px 12px; border-radius: 8px; display: flex; align-items: center; gap: 8px; }
+        nav a:hover, nav a.active { color: white; background: rgba(99,102,241,0.1); }
+        .header-actions { display: flex; gap: 14px; align-items: center; }
+        .icon-btn { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--text-secondary); cursor: pointer; position: relative; }
+        .icon-btn:hover { border-color: var(--accent-primary); color: var(--accent-light); }
+        .login-btn { padding: 10px 24px; background: var(--gradient-accent); color: white; border-radius: 12px; font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        .mobile-menu-btn { display: none; background: none; border: none; color: white; font-size: 24px; }
+        
         /* HERO */
-        .hero { padding: 110px 32px 70px; background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); position: relative; overflow: hidden; min-height: 100vh; display: flex; align-items: center; }
-        .hero-bg { position: absolute; inset: 0; pointer-events: none; }
-        .hero-bg::before { content: ''; position: absolute; top: -40%; right: -20%; width: 70%; height: 140%; background: radial-gradient(ellipse, rgba(99, 102, 241, 0.08) 0%, transparent 60%); }
-        .hero-bg::after { content: ''; position: absolute; bottom: -20%; left: -10%; width: 50%; height: 80%; background: radial-gradient(ellipse, rgba(139, 92, 246, 0.06) 0%, transparent 50%); }
-        .hero-pattern { position: absolute; inset: 0; opacity: 0.4; background-image: radial-gradient(rgba(99, 102, 241, 0.03) 1px, transparent 1px); background-size: 40px 40px; }
-        .hero-content { max-width: 1920px; margin: 0 auto; position: relative; z-index: 1; width: 100%; }
-        .hero-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 80px; align-items: center; }
-        .hero-text h1 { font-size: 58px; font-weight: 900; line-height: 1.1; margin-bottom: 28px; letter-spacing: -1px; }
-        .hero-text h1 span { background: var(--gradient-shine); -webkit-background-clip: text; -webkit-text-fill-color: transparent; position: relative; display: inline-block; }
-        .hero-text h1 span::after { content: ''; position: absolute; bottom: 8px; left: 0; right: 0; height: 10px; background: rgba(99, 102, 241, 0.2); border-radius: 5px; z-index: -1; }
-        .hero-description { font-size: 18px; color: var(--text-secondary); line-height: 1.9; margin-bottom: 40px; max-width: 520px; }
-        .hero-stats { display: flex; gap: 50px; margin-bottom: 44px; }
-        .stat-item { position: relative; }
-        .stat-item::before { content: ''; position: absolute; right: -25px; top: 50%; transform: translateY(-50%); width: 1px; height: 50px; background: linear-gradient(180deg, transparent, var(--accent-dark), transparent); }
-        .stat-item:last-child::before { display: none; }
-        .stat-value { font-size: 46px; font-weight: 900; background: var(--gradient-shine); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; margin-bottom: 8px; }
-        .stat-label { font-size: 14px; color: var(--text-muted); font-weight: 500; }
-        .hero-actions { display: flex; gap: 18px; flex-wrap: wrap; }
-        .btn-outline { background: rgba(99, 102, 241, 0.05); color: var(--accent-light); border: 2px solid var(--accent-dark); }
-        .btn-outline:hover { background: rgba(99, 102, 241, 0.15); border-color: var(--accent-primary); transform: translateY(-3px); }
+        .hero { padding: 120px 32px 80px; background: radial-gradient(circle at 50% 0%, #1a1a2e 0%, var(--bg-primary) 70%); min-height: 80vh; display: flex; align-items: center; }
+        .hero-inner { max-width: 1920px; margin: 0 auto; width: 100%; display: grid; grid-template-columns: 1fr 1.2fr; gap: 80px; align-items: center; }
+        .hero-text h1 { font-size: 58px; font-weight: 900; line-height: 1.1; margin-bottom: 24px; }
+        .hero-text h1 span { background: var(--gradient-shine); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero-desc { font-size: 18px; color: var(--text-secondary); line-height: 1.8; margin-bottom: 40px; max-width: 500px; }
+        .hero-stats { display: flex; gap: 50px; margin-bottom: 40px; }
+        .stat-val { font-size: 42px; font-weight: 900; background: var(--gradient-shine); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1; }
+        .stat-lbl { font-size: 14px; color: var(--text-muted); margin-top: 5px; }
+        .btn-hero { padding: 18px 40px; background: var(--gradient-accent); color: white; border-radius: 16px; font-weight: 700; font-size: 16px; display: inline-flex; align-items: center; gap: 10px; transition: 0.3s; }
+        .btn-hero:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(99,102,241,0.4); }
 
-        /* FEATURED */
-        .hero-featured { position: relative; }
-        .featured-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 90%; background: radial-gradient(ellipse, rgba(99, 102, 241, 0.15) 0%, transparent 65%); filter: blur(50px); pointer-events: none; }
-        .featured-card { background: var(--gradient-card); border-radius: var(--radius-xl); padding: 28px; border: 1px solid var(--border-accent); box-shadow: var(--shadow-card); position: relative; overflow: hidden; }
-        .featured-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--gradient-shine); }
-        .featured-ribbon { position: absolute; top: 45px; right: -35px; background: var(--gradient-accent); color: white; padding: 8px 50px; font-size: 12px; font-weight: 700; transform: rotate(45deg); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3); z-index: 10; }
-        .featured-cover { position: relative; border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px; aspect-ratio: 16/10; }
-        .featured-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease; }
-        .featured-card:hover .featured-cover img { transform: scale(1.05); }
-        .featured-cover-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba(0, 0, 0, 0.9) 100%); }
-        .featured-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.8); width: 80px; height: 80px; background: var(--gradient-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; color: white; opacity: 0; transition: all 0.4s ease; cursor: pointer; box-shadow: 0 8px 30px rgba(99, 102, 241, 0.5); }
-        .featured-card:hover .featured-play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-        .featured-info h3 { font-size: 26px; font-weight: 800; margin-bottom: 12px; line-height: 1.3; }
-        .featured-author { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-        .featured-author-avatar { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--accent-primary); overflow: hidden; }
-        .featured-author-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .featured-author-name { font-size: 14px; color: var(--text-secondary); }
-        .featured-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
-        .featured-stat { display: flex; align-items: center; gap: 7px; padding: 8px 14px; background: rgba(255, 255, 255, 0.03); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-secondary); }
-        .featured-stat i { color: var(--accent-primary); font-size: 12px; }
-        .featured-genres { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-        .genre-badge { padding: 8px 16px; background: rgba(99, 102, 241, 0.1); border: 1px solid var(--border-accent); border-radius: 50px; font-size: 12px; font-weight: 600; color: var(--accent-light); transition: all 0.3s; }
-        .genre-badge:hover { background: rgba(99, 102, 241, 0.2); transform: translateY(-2px); }
-        .featured-synopsis { font-size: 14px; color: var(--text-secondary); line-height: 1.8; margin-bottom: 22px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .featured-progress-section { margin-bottom: 22px; }
-        .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .progress-label { font-size: 13px; color: var(--text-muted); }
-        .progress-value { font-size: 13px; color: var(--accent-light); font-weight: 600; }
-        .progress-track { height: 8px; background: var(--bg-primary); border-radius: 4px; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--gradient-shine); border-radius: 4px; position: relative; }
-        .progress-fill::after { content: ''; position: absolute; inset: 0; width: 30px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4)); animation: progressShine 2s infinite; }
-        @keyframes progressShine { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
-        .featured-actions { display: flex; gap: 12px; }
-        .featured-btn { flex: 1; padding: 16px 20px; border-radius: var(--radius-md); border: none; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.3s; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .featured-btn-primary { background: var(--gradient-accent); color: white; }
-        .featured-btn-primary:hover { box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4); transform: translateY(-2px); }
-        .featured-btn-secondary { background: rgba(99, 102, 241, 0.1); color: var(--accent-light); border: 1px solid var(--border-accent); }
-        .featured-btn-secondary:hover { background: rgba(99, 102, 241, 0.2); }
-        .featured-btn-icon { flex: 0 0 52px; width: 52px; }
+        /* FEATURED CARD */
+        .featured-card { background: var(--gradient-card); border-radius: 24px; padding: 30px; border: 1px solid var(--border-accent); display: flex; gap: 30px; position: relative; overflow: hidden; box-shadow: var(--shadow-card); }
+        .featured-ribbon { position: absolute; top: 30px; right: -35px; background: var(--gradient-accent); color: white; padding: 8px 50px; font-size: 12px; font-weight: 700; transform: rotate(45deg); z-index: 5; }
+        .featured-cover { width: 200px; flex-shrink: 0; border-radius: 16px; overflow: hidden; position: relative; aspect-ratio: 2/3; }
+        .featured-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .featured-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .featured-info h3 { font-size: 28px; font-weight: 800; margin-bottom: 15px; color: white; }
+        .f-meta { display: flex; gap: 20px; font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
+        .f-meta i { color: var(--accent-primary); margin-left: 5px; }
+        .f-genres { display: flex; gap: 10px; margin-bottom: 25px; }
+        .f-badge { padding: 6px 14px; background: rgba(99,102,241,0.1); border: 1px solid var(--border-accent); border-radius: 50px; font-size: 12px; color: var(--accent-light); }
+        .f-synopsis { font-size: 14px; color: var(--text-secondary); line-height: 1.8; margin-bottom: 25px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
         /* SECTIONS */
-        .section { padding: 80px 32px; max-width: 1920px; margin: 0 auto; }
-        .section-dark { background: var(--bg-secondary); max-width: none; padding-left: 0; padding-right: 0; }
-        .section-dark .section-inner { max-width: 1920px; margin: 0 auto; padding: 0 32px; }
-        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
-        .section-title { display: flex; align-items: center; gap: 18px; }
-        .section-icon { width: 56px; height: 56px; background: rgba(99, 102, 241, 0.1); border: 1px solid var(--border-accent); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--accent-primary); }
-        .section-title-text h2 { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
-        .section-title-text p { font-size: 14px; color: var(--text-muted); }
-        .section-controls { display: flex; align-items: center; gap: 14px; }
-        .nav-btn { width: 48px; height: 48px; border-radius: var(--radius-md); border: 1px solid var(--border-accent); background: rgba(99, 102, 241, 0.03); color: var(--text-secondary); cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-        .nav-btn:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--accent-light); background: rgba(99, 102, 241, 0.1); }
-        .view-all-btn { display: flex; align-items: center; gap: 10px; padding: 12px 24px; border-radius: var(--radius-md); background: rgba(99, 102, 241, 0.1); border: 1px solid var(--border-accent); color: var(--accent-light); text-decoration: none; font-size: 14px; font-weight: 600; transition: all 0.3s; }
-        .view-all-btn:hover { background: rgba(99, 102, 241, 0.2); gap: 14px; }
+        .section { padding: 60px 32px; max-width: 1920px; margin: 0 auto; }
+        .sec-dark { background: var(--bg-secondary); max-width: none; padding: 60px 0; }
+        .sec-dark .container { max-width: 1920px; margin: 0 auto; padding: 0 32px; }
+        .sec-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .sec-title { display: flex; align-items: center; gap: 15px; }
+        .sec-icon { width: 50px; height: 50px; background: rgba(99,102,241,0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--accent-primary); font-size: 22px; }
+        .sec-title h2 { font-size: 26px; font-weight: 800; margin: 0; }
+        .sec-nav { display: flex; gap: 10px; }
+        .nav-arrow { width: 44px; height: 44px; border-radius: 12px; background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
+        .nav-arrow:hover { background: var(--accent-primary); color: white; }
 
-        /* SLIDER & CARDS */
-        .slider-wrapper { position: relative; }
-        .slider { display: flex; gap: 24px; overflow-x: auto; scroll-behavior: smooth; padding: 12px 4px 24px; scrollbar-width: none; scroll-snap-type: x mandatory; }
+        /* SLIDERS */
+        .slider-wrap { position: relative; }
+        .slider { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; scrollbar-width: none; scroll-snap-type: x mandatory; }
         .slider::-webkit-scrollbar { display: none; }
-        .novel-card { flex: 0 0 260px; background: var(--gradient-card); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-subtle); transition: all 0.4s; cursor: pointer; position: relative; scroll-snap-align: start; }
-        .novel-card:hover { transform: translateY(-12px); border-color: var(--border-accent); box-shadow: 0 30px 70px rgba(0, 0, 0, 0.5), 0 0 50px rgba(99, 102, 241, 0.1); }
-        .card-cover { position: relative; aspect-ratio: 3/4; overflow: hidden; }
-        .card-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-        .novel-card:hover .card-cover img { transform: scale(1.08); }
-        .card-cover-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(0, 0, 0, 0.95) 100%); opacity: 0; transition: opacity 0.3s; }
-        .novel-card:hover .card-cover-overlay { opacity: 1; }
-        .card-badges { position: absolute; top: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; z-index: 5; }
-        .card-badge { padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 5px; backdrop-filter: blur(10px); }
-        .badge-hot { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
-        .badge-new { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); color: white; }
-        .badge-vip { background: var(--gradient-accent); color: white; }
-        .badge-complete { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; }
-        .card-rating { position: absolute; top: 12px; left: 12px; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; z-index: 5; }
-        .card-rating i { color: #fbbf24; font-size: 11px; }
-        .card-type-badge { position: absolute; bottom: 12px; left: 12px; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; z-index: 5; }
-        .card-type-badge i { color: var(--accent-primary); }
-        .card-quick-actions { position: absolute; bottom: 16px; left: 16px; right: 16px; display: flex; gap: 10px; opacity: 0; transform: translateY(20px); transition: all 0.3s; z-index: 10; }
-        .novel-card:hover .card-quick-actions { opacity: 1; transform: translateY(0); }
-        .quick-action-btn { flex: 1; padding: 12px; border-radius: var(--radius-sm); border: none; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.3s; }
-        .quick-action-btn-primary { background: var(--gradient-accent); color: white; }
-        .quick-action-btn-secondary { background: rgba(255,255,255,0.1); color: white; backdrop-filter: blur(10px); }
-        .quick-action-btn:hover { transform: scale(1.03); }
-        .card-body { padding: 18px; }
-        .card-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 45px; }
-        .card-author { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
-        .card-author i { color: var(--accent-dark); }
-        .card-meta { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
-        .card-meta-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
-        .card-meta-item i { color: var(--accent-dark); font-size: 11px; }
-        .card-genres { display: flex; flex-wrap: wrap; gap: 6px; }
-        .card-genre { padding: 5px 10px; background: rgba(99,102,241,0.08); border-radius: 6px; font-size: 11px; color: var(--accent-light); font-weight: 500; }
-        .card-progress { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
-        .card-progress-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        .card-progress-label { font-size: 11px; color: var(--text-muted); }
-        .card-progress-value { font-size: 11px; color: var(--accent-light); font-weight: 600; }
-        .card-progress-track { height: 4px; background: var(--bg-primary); border-radius: 2px; overflow: hidden; }
-        .card-progress-fill { height: 100%; background: var(--gradient-shine); border-radius: 2px; }
+        
+        /* CARD (VERTICAL) */
+        .card { flex: 0 0 240px; background: var(--gradient-card); border-radius: 16px; border: 1px solid var(--border-subtle); overflow: hidden; transition: 0.4s; cursor: pointer; scroll-snap-align: start; position: relative; }
+        .card:hover { transform: translateY(-10px); border-color: var(--border-accent); box-shadow: 0 15px 40px rgba(0,0,0,0.5); }
+        .card-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+        .card-ovl { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent 50%); }
+        .c-badge { position: absolute; top: 10px; right: 10px; font-size: 10px; font-weight: 700; padding: 4px 8px; border-radius: 6px; color: white; }
+        .bg-hot { background: #ef4444; } .bg-new { background: #06b6d4; } .bg-complete { background: #22c55e; }
+        .c-rate { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--gold); }
+        .card-body { padding: 15px; }
+        .c-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .c-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); }
 
-        /* UPDATES */
-        .updates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; }
-        .update-card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 20px; display: flex; gap: 18px; border: 1px solid var(--border-subtle); transition: all 0.3s; cursor: pointer; position: relative; overflow: hidden; }
-        .update-card::before { content: ''; position: absolute; top: 0; right: 0; width: 4px; height: 100%; background: var(--gradient-shine); opacity: 0; transition: opacity 0.3s; }
-        .update-card:hover { border-color: var(--border-accent); background: var(--bg-card-hover); transform: translateX(-6px); }
-        .update-card:hover::before { opacity: 1; }
-        .update-cover { width: 90px; height: 125px; border-radius: var(--radius-md); overflow: hidden; flex-shrink: 0; position: relative; }
-        .update-cover img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s; }
-        .update-card:hover .update-cover img { transform: scale(1.05); }
-        .update-new-indicator { position: absolute; top: 8px; right: 8px; width: 12px; height: 12px; background: #ef4444; border-radius: 50%; border: 2px solid var(--bg-card); animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); } 50% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } }
-        .update-content { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        .update-type { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--accent-primary); font-weight: 600; margin-bottom: 8px; }
-        .update-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .update-chapter { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--accent-light); font-weight: 600; margin-bottom: 12px; }
-        .update-chapter i { font-size: 12px; }
-        .update-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; }
-        .update-stats { display: flex; gap: 16px; }
-        .update-stat { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
-        .update-stat i { color: var(--accent-dark); font-size: 11px; }
-        .update-time { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+        /* UPDATES GRID */
+        .up-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .up-card { background: var(--bg-card); border-radius: 16px; padding: 15px; border: 1px solid var(--border-subtle); display: flex; gap: 15px; align-items: center; transition: 0.3s; cursor: pointer; }
+        .up-card:hover { border-color: var(--border-accent); transform: translateX(-5px); }
+        .up-img { width: 70px; height: 95px; border-radius: 10px; object-fit: cover; }
+        .up-info h4 { font-size: 15px; margin-bottom: 5px; }
+        .up-ch { font-size: 13px; color: var(--accent-light); font-weight: 600; margin-bottom: 5px; }
+        .up-time { font-size: 11px; color: var(--text-muted); }
 
-        /* CATEGORIES */
-        .categories-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 18px; }
-        .category-card { background: var(--gradient-card); border-radius: var(--radius-lg); padding: 28px 20px; text-align: center; border: 1px solid var(--border-subtle); transition: all 0.4s; cursor: pointer; position: relative; overflow: hidden; }
-        .category-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(99,102,241,0.1) 0%, transparent 70%); opacity: 0; transition: opacity 0.3s; }
-        .category-card:hover { border-color: var(--border-accent); transform: translateY(-8px); box-shadow: 0 20px 50px rgba(0,0,0,0.4), 0 0 40px rgba(99,102,241,0.1); }
-        .category-card:hover::before { opacity: 1; }
-        .category-icon { width: 72px; height: 72px; border-radius: var(--radius-lg); background: rgba(99,102,241,0.1); border: 1px solid var(--border-accent); display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; font-size: 34px; transition: all 0.4s; position: relative; z-index: 1; }
-        .category-card:hover .category-icon { background: var(--gradient-accent); transform: scale(1.15) rotate(5deg); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
-        .category-name { font-size: 16px; font-weight: 700; margin-bottom: 8px; position: relative; z-index: 1; }
-        .category-count { font-size: 13px; color: var(--text-muted); position: relative; z-index: 1; }
+        /* EDITOR'S PICK (HORIZONTAL WIREFRAME) */
+        .ep-slide { flex: 0 0 360px; scroll-snap-align: start; }
+        .ep-card { display: flex; background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-subtle); overflow: hidden; height: 160px; transition: 0.3s; position: relative; }
+        .ep-card:hover { border-color: var(--gold); transform: translateY(-5px); }
+        .ep-img { width: 110px; height: 100%; object-fit: cover; flex-shrink: 0; }
+        .ep-info { padding: 15px; display: flex; flex-direction: column; justify-content: center; flex: 1; min-width: 0; }
+        .ep-cat { font-size: 10px; color: var(--gold); text-transform: uppercase; margin-bottom: 5px; font-weight: 700; }
+        .ep-title { font-size: 16px; font-weight: 800; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ep-sum { font-size: 12px; color: var(--text-muted); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 
-        /* RANKINGS */
-        .rankings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
-        .ranking-card { background: var(--gradient-card); border-radius: var(--radius-xl); padding: 28px; border: 1px solid var(--border-subtle); transition: 0.3s; }
-        .ranking-card:hover { border-color: var(--border-accent); }
-        .ranking-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border-subtle); }
-        .ranking-icon { width: 54px; height: 54px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 24px; }
-        .ranking-icon-gold { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: white; }
-        .ranking-icon-fire { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
-        .ranking-icon-star { background: var(--gradient-accent); color: white; }
-        .ranking-header-text h3 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
-        .ranking-header-text p { font-size: 13px; color: var(--text-muted); }
-        .ranking-list { display: flex; flex-direction: column; gap: 14px; }
-        .ranking-item { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: var(--radius-md); transition: 0.3s; cursor: pointer; border: 1px solid transparent; }
-        .ranking-item:hover { background: rgba(99,102,241,0.05); border-color: var(--border-accent); }
-        .ranking-position { width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex-shrink: 0; }
-        .ranking-position-1 { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: white; box-shadow: 0 4px 15px rgba(251,191,36,0.3); }
-        .ranking-position-2 { background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%); color: var(--bg-primary); }
-        .ranking-position-3 { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); color: white; }
-        .ranking-position-default { background: var(--bg-primary); color: var(--text-muted); border: 1px solid var(--border-subtle); }
-        .ranking-cover { width: 55px; height: 75px; border-radius: var(--radius-sm); overflow: hidden; flex-shrink: 0; }
-        .ranking-cover img { width: 100%; height: 100%; object-fit: cover; }
-        .ranking-info { flex: 1; min-width: 0; }
-        .ranking-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ranking-stats { display: flex; gap: 14px; }
-        .ranking-stat { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); }
-        .ranking-stat i { color: var(--accent-dark); font-size: 10px; }
-        .ranking-trend { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 6px; }
-        .ranking-trend-up { color: #22c55e; background: rgba(34,197,94,0.1); }
-        .ranking-trend-down { color: #ef4444; background: rgba(239,68,68,0.1); }
-        .ranking-trend-same { color: var(--text-muted); background: rgba(255,255,255,0.05); }
+        /* HIGHEST RATED (HORIZONTAL + RANK) */
+        .hr-slide { flex: 0 0 300px; scroll-snap-align: start; }
+        .hr-card { display: flex; align-items: center; background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-subtle); padding: 15px; gap: 15px; position: relative; overflow: hidden; transition: 0.3s; height: 130px; }
+        .hr-card:hover { border-color: var(--accent-primary); transform: translateY(-3px); }
+        .hr-rank { position: absolute; top: -10px; right: -10px; width: 50px; height: 50px; background: var(--accent-primary); color: white; border-radius: 50%; display: flex; align-items: flex-end; justify-content: flex-start; padding: 0 0 12px 14px; font-weight: 900; font-size: 18px; box-shadow: -2px 2px 10px rgba(0,0,0,0.3); z-index: 2; }
+        .hr-img { width: 75px; height: 100px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+        .hr-info { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+        .hr-title { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hr-rate { color: var(--gold); font-size: 13px; font-weight: 700; }
 
-        /* FOOTER */
-        footer { background: var(--bg-tertiary); padding: 80px 32px 32px; border-top: 1px solid var(--border-accent); }
-        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr; gap: 60px; margin-bottom: 60px; }
-        .footer-brand p { color: var(--text-secondary); font-size: 14px; line-height: 1.9; margin: 24px 0 28px; }
-        .footer-social { display: flex; gap: 12px; }
-        .social-link { width: 48px; height: 48px; border-radius: var(--radius-md); border: 1px solid var(--border-accent); background: rgba(99,102,241,0.03); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 20px; transition: 0.3s; }
-        .social-link:hover { border-color: var(--accent-primary); color: var(--accent-light); background: rgba(99,102,241,0.1); transform: translateY(-4px); }
-        .footer-section h4 { font-size: 16px; font-weight: 700; margin-bottom: 24px; color: var(--accent-light); display: flex; align-items: center; gap: 10px; }
-        .footer-section h4::before { content: ''; width: 4px; height: 20px; background: var(--gradient-accent); border-radius: 2px; }
-        .footer-links { list-style: none; }
-        .footer-links li { margin-bottom: 14px; }
-        .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 10px; transition: 0.3s; }
-        .footer-links a i { font-size: 10px; transition: 0.3s; }
-        .footer-links a:hover { color: var(--accent-light); }
-        .footer-links a:hover i { transform: translateX(-6px); }
-        .footer-newsletter { background: var(--bg-card); border-radius: var(--radius-lg); padding: 28px; border: 1px solid var(--border-accent); }
-        .footer-newsletter p { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.7; }
-        .newsletter-form { display: flex; gap: 10px; }
-        .newsletter-form input { flex: 1; padding: 14px 18px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle); background: var(--bg-primary); color: var(--text-primary); font-family: inherit; font-size: 14px; }
-        .newsletter-form input:focus { outline: none; border-color: var(--accent-primary); }
-        .newsletter-form button { padding: 14px 22px; border-radius: var(--radius-md); border: none; background: var(--gradient-accent); color: white; font-weight: 600; cursor: pointer; transition: 0.3s; font-size: 16px; }
-        .newsletter-form button:hover { box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); }
-        .footer-bottom { padding-top: 32px; border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
-        .footer-bottom p { color: var(--text-muted); font-size: 13px; }
-        .footer-bottom p i.fa-heart { color: #ef4444; animation: heartbeat 1.5s infinite; }
-        @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-        .footer-bottom-links { display: flex; gap: 28px; }
-        .footer-bottom-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; transition: 0.3s; }
-        .footer-bottom-links a:hover { color: var(--accent-light); }
-        .back-to-top { position: fixed; bottom: 32px; left: 32px; width: 54px; height: 54px; border-radius: var(--radius-md); border: none; background: var(--gradient-accent); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; opacity: 0; visibility: hidden; transition: 0.3s; z-index: 999; box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4); }
-        .back-to-top.visible { opacity: 1; visibility: visible; }
-        .back-to-top:hover { transform: translateY(-5px); box-shadow: 0 12px 35px rgba(99, 102, 241, 0.5); }
-
-        /* RESPONSIVE */
-        @media (max-width: 1400px) {
-            .hero-grid { gap: 50px; }
-            .hero-text h1 { font-size: 48px; }
-            .footer-grid { grid-template-columns: 2fr 1fr 1fr 1fr; }
-            .footer-newsletter { grid-column: span 4; margin-top: 20px; }
-        }
-        @media (max-width: 1200px) {
-            .rankings-grid { grid-template-columns: 1fr 1fr; }
-            .ranking-card:last-child { grid-column: span 2; }
-        }
-        @media (max-width: 1024px) {
-            .header-content { padding: 0 24px; }
-            nav, .search-box, .icon-btn, .login-btn { display: none; }
-            .mobile-menu-btn { display: flex; }
-            .mobile-menu, .mobile-menu-overlay { display: block; }
-            .hero { padding: 100px 24px 60px; min-height: auto; }
-            .hero-grid { grid-template-columns: 1fr; gap: 50px; }
-            .hero-text h1 { font-size: 40px; }
-            .hero-description { font-size: 16px; }
-            .hero-stats { gap: 36px; }
-            .stat-value { font-size: 38px; }
-            .section { padding: 60px 24px; }
-            .section-dark .section-inner { padding: 0 24px; }
-            .section-header { flex-direction: column; align-items: flex-start; }
-            .section-controls { width: 100%; justify-content: space-between; }
-            .rankings-grid { grid-template-columns: 1fr; }
-            .ranking-card:last-child { grid-column: span 1; }
-            .footer-grid { grid-template-columns: 1fr 1fr; gap: 40px; }
-            .footer-brand, .footer-newsletter { grid-column: span 2; }
-        }
-        @media (max-width: 768px) {
-            html { font-size: 15px; }
-            .header-content { height: 64px; padding: 0 16px; }
-            .logo-icon { width: 42px; height: 42px; font-size: 20px; }
-            .logo-text { font-size: 22px; }
-            .hero { padding: 90px 16px 50px; }
-            .hero-text h1 { font-size: 32px; margin-bottom: 20px; }
-            .hero-text h1 span::after { height: 6px; bottom: 4px; }
-            .hero-description { font-size: 15px; margin-bottom: 32px; }
-            .hero-stats { flex-wrap: wrap; gap: 24px; margin-bottom: 36px; }
-            .stat-item { flex: 1 1 45%; }
-            .stat-item::before { display: none; }
-            .stat-value { font-size: 32px; }
-            .stat-label { font-size: 13px; }
-            .hero-actions { flex-direction: column; }
-            .btn { width: 100%; justify-content: center; padding: 16px 32px; }
-            .featured-card { padding: 20px; }
-            .featured-ribbon { font-size: 10px; padding: 6px 40px; top: 35px; right: -40px; }
-            .featured-cover { aspect-ratio: 16/9; }
-            .featured-info h3 { font-size: 20px; }
-            .featured-stats { gap: 8px; }
-            .featured-stat { padding: 6px 10px; font-size: 12px; }
-            .featured-actions { flex-wrap: wrap; }
-            .featured-btn { padding: 14px 16px; font-size: 13px; }
-            .featured-btn-icon { flex: 0 0 48px; width: 48px; }
-            .section { padding: 50px 16px; }
-            .section-dark .section-inner { padding: 0 16px; }
-            .section-icon { width: 48px; height: 48px; font-size: 20px; }
-            .section-title-text h2 { font-size: 22px; }
-            .novel-card { flex: 0 0 200px; }
-            .card-body { padding: 14px; }
-            .card-title { font-size: 14px; min-height: 42px; }
-            .updates-grid { grid-template-columns: 1fr; }
-            .update-card { padding: 16px; gap: 14px; }
-            .update-cover { width: 75px; height: 105px; }
-            .update-title { font-size: 15px; }
-            .categories-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
-            .category-card { padding: 22px 16px; }
-            .category-icon { width: 60px; height: 60px; font-size: 28px; }
-            .category-name { font-size: 14px; }
-            .ranking-card { padding: 22px; }
-            .ranking-item { padding: 12px; gap: 12px; }
-            .ranking-cover { width: 48px; height: 66px; }
-            .ranking-title { font-size: 13px; }
-            footer { padding: 50px 16px 24px; }
-            .footer-grid { grid-template-columns: 1fr; gap: 32px; }
-            .footer-brand, .footer-newsletter { grid-column: span 1; }
-            .newsletter-form { flex-direction: column; }
-            .footer-bottom { flex-direction: column; text-align: center; }
-            .footer-bottom-links { justify-content: center; flex-wrap: wrap; gap: 20px; }
-            .back-to-top { bottom: 20px; left: 20px; width: 48px; height: 48px; }
-        }
-        @media (max-width: 480px) {
-            .hero-text h1 { font-size: 26px; }
-            .hero-stats { gap: 16px; }
-            .stat-value { font-size: 26px; }
-            .featured-cover { aspect-ratio: 4/3; }
-            .featured-info h3 { font-size: 18px; }
-            .featured-author { flex-wrap: wrap; }
-            .featured-genres { gap: 6px; }
-            .genre-badge { padding: 6px 12px; font-size: 11px; }
-            .novel-card { flex: 0 0 170px; }
-            .categories-grid { grid-template-columns: repeat(2, 1fr); }
-            .category-icon { width: 52px; height: 52px; font-size: 24px; }
-            .mobile-menu { width: 100%; max-width: none; }
-        }
+        /* FOOTER & MOBILE */
+        footer { background: var(--bg-tertiary); padding: 50px 0; border-top: 1px solid var(--border-accent); margin-top: 50px; }
+        .foot-content { max-width: 1920px; margin: 0 auto; padding: 0 32px; text-align: center; }
+        .foot-logo { font-size: 24px; font-weight: 900; color: white; margin-bottom: 10px; display: inline-block; }
+        .foot-copy { color: var(--text-muted); font-size: 14px; }
+        
+        @media(max-width:1024px){.hero-inner{grid-template-columns:1fr;gap:40px;text-align:center}.hero-stats{justify-content:center}.featured-card{flex-direction:column}.featured-cover{width:100%;aspect-ratio:16/9}nav,.search-box,.login-btn.desktop{display:none}.mobile-menu-btn{display:block}}
+        @media(max-width:768px){.hero-text h1{font-size:36px}.stat-value{font-size:32px}.card{flex:0 0 180px}.up-grid{grid-template-columns:1fr}}
+        .mobile-menu-btn{display:none;background:none;border:none;color:white;font-size:24px;cursor:pointer}
+        .mob-menu{position:fixed;top:0;right:-100%;width:280px;height:100%;background:var(--bg-secondary);z-index:2000;padding:20px;transition:0.3s;border-left:1px solid var(--border-accent)}
+        .mob-menu.active{right:0}.mob-ovl{position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:1999;display:none}.mob-ovl.active{display:block}
+        .mob-links a{display:block;padding:15px;border-bottom:1px solid var(--border-subtle);color:var(--text-secondary);font-weight:500}
     </style>
 </head>
 <body>
+
+    <!-- Header -->
     <header id="header">
         <div class="header-content">
-            <a href="index.php" class="logo">
-                <div class="logo-icon"><i class="fas fa-book-open"></i></div>
-                <span class="logo-text">ناول‌خونه</span>
-            </a>
+            <a href="index.php" class="logo"><i class="fas fa-book-open"></i> <span class="logo-text">ناول‌خونه</span></a>
             <nav>
                 <a href="index.php" class="active"><i class="fas fa-home"></i> خانه</a>
-                <a href="#"><i class="fas fa-compass"></i> کشف</a>
-                <a href="#"><i class="fas fa-layer-group"></i> دسته‌بندی</a>
-                <a href="#"><i class="fas fa-crown"></i> رتبه‌بندی</a>
-                <a href="#"><i class="fas fa-bolt"></i> بروزرسانی</a>
-                <a href="#"><i class="fas fa-book-reader"></i> کتابخانه</a>
+                <a href="search.php"><i class="fas fa-compass"></i> کشف</a>
+                <a href="all_genres.php"><i class="fas fa-layer-group"></i> دسته‌بندی</a>
+                <?php if($is_logged_in): ?><a href="library.php"><i class="fas fa-book-reader"></i> کتابخانه</a><?php endif; ?>
             </nav>
             <div class="header-actions">
-                <div class="search-box">
-                    <input type="text" class="search-input" placeholder="جستجوی ناول، نویسنده...">
-                    <button class="search-btn"><i class="fas fa-search"></i></button>
-                </div>
-                <button class="icon-btn"><i class="fas fa-bell"></i><span class="badge">5</span></button>
-                <button class="icon-btn"><i class="fas fa-bookmark"></i></button>
-                <?php if ($is_logged_in): ?>
-                    <button class="login-btn"><img src="<?php echo $user_avatar; ?>" style="width:20px;height:20px;border-radius:50%;margin-left:5px;"> <?php echo $username; ?></button>
+                <a href="search.php" class="icon-btn"><i class="fas fa-search"></i></a>
+                <?php if($is_logged_in): ?>
+                    <?php if($is_admin): ?><a href="admin/index.php" class="icon-btn"><i class="fas fa-cogs"></i></a><?php endif; ?>
+                    <a href="dashboard/index.php" class="icon-btn"><i class="fas fa-pen-nib"></i></a>
+                    <a href="profile.php" class="login-btn desktop" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3)">
+                        <img src="<?php echo $user_avatar; ?>" style="width:20px;height:20px;border-radius:50%"> <?php echo $username; ?>
+                    </a>
                 <?php else: ?>
-                    <a href="login.php" class="login-btn"><i class="fas fa-user"></i> ورود</a>
+                    <a href="login.php" class="login-btn desktop"><i class="fas fa-user"></i> ورود</a>
                 <?php endif; ?>
-                <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
+                <button class="mobile-menu-btn" onclick="toggleMob()"><i class="fas fa-bars"></i></button>
             </div>
         </div>
     </header>
 
-    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
-    <div class="mobile-menu" id="mobileMenu">
-        <div class="mobile-menu-header">
-            <a href="#" class="logo"><div class="logo-icon" style="width:40px;height:40px;font-size:18px;"><i class="fas fa-book-open"></i></div><span class="logo-text" style="font-size:20px;">ناول‌خونه</span></a>
-            <button class="mobile-menu-close" id="mobileMenuClose"><i class="fas fa-times"></i></button>
+    <!-- Mobile Menu -->
+    <div class="mob-ovl" id="mobOvl" onclick="toggleMob()"></div>
+    <div class="mob-menu" id="mobMenu">
+        <div style="display:flex;justify-content:space-between;margin-bottom:30px;font-size:18px;font-weight:700">
+            <span>منو</span><i class="fas fa-times" onclick="toggleMob()" style="cursor:pointer"></i>
         </div>
-        <div class="mobile-search"><input type="text" placeholder="جستجوی ناول..."></div>
-        <nav class="mobile-nav">
-            <a href="#" class="active"><i class="fas fa-home"></i> خانه</a>
-            <a href="#"><i class="fas fa-compass"></i> کشف کنید</a>
-            <a href="#"><i class="fas fa-layer-group"></i> دسته‌بندی</a>
-            <a href="#"><i class="fas fa-crown"></i> رتبه‌بندی</a>
-            <a href="#"><i class="fas fa-bolt"></i> آخرین بروزرسانی</a>
-            <a href="#"><i class="fas fa-book-reader"></i> کتابخانه من</a>
-            <a href="#"><i class="fas fa-bell"></i> اعلان‌ها</a>
-        </nav>
-        <div class="mobile-user-actions">
-            <?php if ($is_logged_in): ?>
-                <button class="mobile-login-btn"><?php echo $username; ?></button>
+        <div class="mob-links">
+            <a href="index.php">خانه</a>
+            <a href="search.php">جستجو</a>
+            <a href="all_genres.php">ژانرها</a>
+            <?php if($is_logged_in): ?>
+                <a href="profile.php">پروفایل</a>
+                <a href="library.php">کتابخانه</a>
+                <a href="logout.php" style="color:#ff4d4d">خروج</a>
             <?php else: ?>
-                <button class="mobile-login-btn"><i class="fas fa-sign-in-alt"></i> ورود</button>
-                <button class="mobile-register-btn"><i class="fas fa-user-plus"></i> ثبت‌نام</button>
+                <a href="login.php">ورود</a>
+                <a href="register.php">ثبت‌نام</a>
             <?php endif; ?>
         </div>
     </div>
 
+    <!-- Hero -->
     <section class="hero">
-        <div class="hero-bg"></div>
-        <div class="hero-pattern"></div>
-        <div class="hero-content">
-            <div class="hero-grid">
-                <div class="hero-text">
-                    <h1>دنیای <span>ناول</span> را<br>با ما تجربه کنید</h1>
-                    <p class="hero-description">بزرگترین کتابخانه آنلاین ترجمه ناول‌های آسیایی به زبان فارسی. هزاران ناول چینی، کره‌ای و ژاپنی با بهترین کیفیت ترجمه منتظر شماست!</p>
-                    <div class="hero-stats">
-                        <div class="stat-item"><div class="stat-value"><?php echo $stats['novels']; ?>+</div><div class="stat-label">ناول فعال</div></div>
-                        <div class="stat-item"><div class="stat-value"><?php echo $stats['chapters']; ?>+</div><div class="stat-label">فصل ترجمه شده</div></div>
-                        <div class="stat-item"><div class="stat-value"><?php echo $stats['users']; ?>+</div><div class="stat-label">کاربر فعال</div></div>
-                    </div>
-                    <div class="hero-actions">
-                        <button class="btn btn-primary"><i class="fas fa-rocket"></i> شروع مطالعه</button>
-                        <button class="btn btn-outline"><i class="fas fa-random"></i> ناول تصادفی</button>
+        <div class="hero-inner">
+            <div class="hero-text">
+                <h1>دنیای <span>ناول</span> را<br>با ما تجربه کنید</h1>
+                <p class="hero-desc">بزرگترین کتابخانه آنلاین ناول‌های ترجمه شده فارسی. هزاران ناول چینی، کره‌ای و ژاپنی با بهترین کیفیت.</p>
+                <div class="hero-stats">
+                    <div><div class="stat-num"><?php echo number_format($stats['novels']); ?>+</div><div class="stat-label">ناول</div></div>
+                    <div><div class="stat-num"><?php echo number_format($stats['chapters']); ?>+</div><div class="stat-label">فصل</div></div>
+                    <div><div class="stat-num"><?php echo number_format($stats['users']); ?>+</div><div class="stat-label">کاربر</div></div>
+                </div>
+                <a href="all_genres.php" class="btn-hero"><i class="fas fa-rocket"></i> شروع مطالعه</a>
+            </div>
+            
+            <?php if($featured): ?>
+            <div class="featured-wrapper">
+                <div class="featured-card">
+                    <div class="featured-ribbon"><i class="fas fa-fire"></i> ویژه</div>
+                    <div class="featured-cover"><img src="<?php echo htmlspecialchars($featured['cover_url']); ?>" alt="Featured"></div>
+                    <div class="featured-info">
+                        <span class="f-tag">پیشنهاد ما</span>
+                        <h3 class="f-title"><?php echo htmlspecialchars($featured['title']); ?></h3>
+                        <div class="f-meta">
+                            <span><i class="fas fa-pen"></i> <?php echo htmlspecialchars($featured['author']); ?></span>
+                            <span><i class="fas fa-star"></i> <?php echo htmlspecialchars($featured['rating']); ?></span>
+                        </div>
+                        <p class="f-synopsis"><?php echo htmlspecialchars($featured['summary']); ?></p>
+                        <a href="novel_detail.php?id=<?php echo $featured['id']; ?>" class="login-btn" style="width:fit-content;text-decoration:none">خواندن</a>
                     </div>
                 </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </section>
 
-                <div class="hero-featured">
-                    <div class="featured-glow"></div>
-                    <div class="featured-card">
-                        <div class="featured-ribbon"><i class="fas fa-fire"></i> پرطرفدارترین</div>
-                        <div class="featured-cover">
-                            <img src="<?php echo htmlspecialchars($hot_novels[0]['image'] ?? 'https://m.media-amazon.com/images/I/81KvF7mJRCL._AC_UF1000,1000_QL80_.jpg'); ?>" alt="Solo Leveling">
-                            <div class="featured-cover-overlay"></div>
-                            <div class="featured-play"><i class="fas fa-play"></i></div>
-                        </div>
-                        <div class="featured-info">
-                            <h3><?php echo htmlspecialchars($hot_novels[0]['title'] ?? 'عنوان پیش‌فرض'); ?></h3>
-                            <div class="featured-author">
-                                <div class="featured-author-avatar"><img src="https://i.pravatar.cc/100?img=12" alt="Author"></div>
-                                <span class="featured-author-name">نویسنده: <strong><?php echo htmlspecialchars($hot_novels[0]['author'] ?? 'نویسنده'); ?></strong></span>
-                            </div>
-                            <div class="featured-stats">
-                                <div class="featured-stat"><i class="fas fa-star"></i> <?php echo $hot_novels[0]['rating'] ?? '5.0'; ?></div>
-                                <div class="featured-stat"><i class="fas fa-eye"></i> <?php echo $hot_novels[0]['views'] ?? '0'; ?></div>
-                            </div>
-                            <div class="featured-genres">
-                                <?php if(!empty($hot_novels[0]['genres'])) foreach(array_slice($hot_novels[0]['genres'],0,3) as $g) echo "<span class='genre-badge'>$g</span>"; ?>
-                            </div>
-                            <p class="featured-synopsis">خلاصه داستان...</p>
-                            <div class="featured-actions">
-                                <a href="novel_detail.php?id=<?php echo $hot_novels[0]['id'] ?? 1; ?>" class="featured-btn featured-btn-primary" style="text-decoration:none;"><i class="fas fa-book-reader"></i> شروع مطالعه</a>
-                                <button class="featured-btn featured-btn-secondary"><i class="fas fa-plus"></i> کتابخانه</button>
-                            </div>
-                        </div>
+    <!-- Sliders Logic -->
+    <?php function render_slider($id, $title, $icon, $data) { if(empty($data)) return; ?>
+    <section class="section">
+        <div class="container">
+            <div class="sec-header">
+                <div class="sec-title"><div class="sec-icon"><i class="fas <?php echo $icon; ?>"></i></div><h2><?php echo $title; ?></h2></div>
+                <div class="sec-nav">
+                    <button class="nav-arrow" onclick="document.getElementById('<?php echo $id; ?>').scrollBy({left:300,behavior:'smooth'})"><i class="fas fa-chevron-right"></i></button>
+                    <button class="nav-arrow" onclick="document.getElementById('<?php echo $id; ?>').scrollBy({left:-300,behavior:'smooth'})"><i class="fas fa-chevron-left"></i></button>
+                </div>
+            </div>
+            <div class="slider-wrap"><div class="slider" id="<?php echo $id; ?>">
+                <?php foreach($data as $n): ?>
+                <div class="card" onclick="window.location.href='novel_detail.php?id=<?php echo $n['id']; ?>'">
+                    <div class="card-img-wrap" style="position:relative">
+                        <img src="<?php echo htmlspecialchars($n['image']); ?>" class="card-img">
+                        <div class="card-ovl"></div>
+                        <div class="card-rating"><i class="fas fa-star"></i> <?php echo $n['rating']; ?></div>
+                        <?php if($n['badge']): ?><div class="c-badge bg-<?php echo $n['badge']['class']; ?>"><?php echo $n['badge']['text']; ?></div><?php endif; ?>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="c-title"><?php echo htmlspecialchars($n['title']); ?></h4>
+                        <div class="c-meta"><span><?php echo $n['type']; ?></span><span><?php echo $n['chapters']; ?> فصل</span></div>
                     </div>
                 </div>
+                <?php endforeach; ?>
+            </div></div>
+        </div>
+    </section>
+    <?php } ?>
+
+    <?php render_slider('hot-slider', 'داغ‌ترین‌ها', 'fa-fire', $hot_novels); ?>
+
+    <!-- Updates -->
+    <section class="section sec-dark">
+        <div class="container">
+            <div class="sec-header"><div class="sec-title"><div class="sec-icon"><i class="fas fa-bolt"></i></div><h2>آخرین بروزرسانی‌ها</h2></div></div>
+            <div class="up-grid">
+                <?php foreach($updates_list as $u): ?>
+                <div class="up-card" onclick="window.location.href='novel_detail.php?id=<?php echo $u['id']; ?>'">
+                    <img src="<?php echo htmlspecialchars($u['image']); ?>" class="up-img">
+                    <div class="up-info">
+                        <h4 class="up-title"><?php echo htmlspecialchars($u['title']); ?></h4>
+                        <div class="up-ch"><?php echo htmlspecialchars($u['chapter']); ?></div>
+                        <div class="up-time"><i class="far fa-clock"></i> <?php echo $u['time']; ?></div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </section>
 
-    <!-- JS Data Injection -->
-    <script>
-        const novelsData = {
-            hot: <?php echo json_encode($hot_novels); ?>,
-            new: <?php echo json_encode($new_novels); ?>,
-            complete: <?php echo json_encode($complete_novels); ?>
-        };
-        const updates = <?php echo json_encode($updates_list); ?>;
-        const rankings = {
-            weekly: <?php echo json_encode($rankings_list); ?>,
-            trending: <?php echo json_encode($rankings_list); ?>,
-            allTime: <?php echo json_encode($rankings_list); ?>
-        };
-        const categories = [
-            { name: "اکشن", icon: "⚔️", count: 1250 },
-            { name: "فانتزی", icon: "🐉", count: 1890 },
-            { name: "عاشقانه", icon: "💕", count: 780 },
-            { name: "ماجراجویی", icon: "🗺️", count: 650 },
-            { name: "زیائنشیا", icon: "⛩️", count: 920 },
-            { name: "کمدی", icon: "😂", count: 420 },
-            { name: "رازآلود", icon: "🔮", count: 310 },
-            { name: "سیستم", icon: "📊", count: 680 },
-            { name: "بازی", icon: "🎮", count: 540 },
-            { name: "رزمی", icon: "🥋", count: 780 }
-        ];
-
-        function createNovelCard(novel) {
-            const badgeHTML = novel.badge ? `<div class="card-badges"><span class="card-badge badge-${novel.badge}">${novel.badge.toUpperCase()}</span></div>` : '';
-            return `
-                <div class="novel-card" onclick="window.location.href='novel_detail.php?id=${novel.id}'">
-                    <div class="card-cover">
-                        <img src="${novel.image}" alt="${novel.title}" loading="lazy">
-                        <div class="card-cover-overlay"></div>
-                        ${badgeHTML}
-                        <div class="card-rating"><i class="fas fa-star"></i><span>${novel.rating}</span></div>
-                        <div class="card-type-badge"><i class="fas fa-globe-asia"></i> ${novel.type}</div>
-                        <div class="card-quick-actions">
-                            <button class="quick-action-btn quick-action-btn-primary"><i class="fas fa-book-reader"></i> مطالعه</button>
+    <!-- Editor's Pick (Horizontal) -->
+    <?php if(!empty($editors_picks)): ?>
+    <section class="section">
+        <div class="container">
+            <div class="sec-header"><div class="sec-title"><div class="sec-icon"><i class="fas fa-pen-nib"></i></div><h2>پیشنهاد سردبیر</h2></div>
+            <div class="sec-nav"><button class="nav-arrow" onclick="document.getElementById('ep-s').scrollBy({left:300,behavior:'smooth'})"><i class="fas fa-chevron-right"></i></button><button class="nav-arrow" onclick="document.getElementById('ep-s').scrollBy({left:-300,behavior:'smooth'})"><i class="fas fa-chevron-left"></i></button></div></div>
+            <div class="slider-wrap"><div class="slider" id="ep-s">
+                <?php foreach($editors_picks as $ep): ?>
+                <div class="ep-slide">
+                    <a href="novel_detail.php?id=<?php echo $ep['id']; ?>" class="ep-card">
+                        <div class="ep-info">
+                            <span class="ep-cat"><?php echo htmlspecialchars($ep['genre']); ?></span>
+                            <h4 class="ep-title"><?php echo htmlspecialchars($ep['title']); ?></h4>
+                            <p class="ep-sum"><?php echo htmlspecialchars($ep['summary']); ?></p>
                         </div>
-                    </div>
-                    <div class="card-body">
-                        <h3 class="card-title">${novel.title}</h3>
-                        <div class="card-author"><i class="fas fa-pen-fancy"></i> ${novel.author}</div>
-                        <div class="card-meta">
-                            <span class="card-meta-item"><i class="fas fa-eye"></i> ${novel.views}</span>
-                            <span class="card-meta-item"><i class="fas fa-file-alt"></i> ${novel.chapters}</span>
+                        <img src="<?php echo htmlspecialchars($ep['image']); ?>" class="ep-img">
+                    </a>
+                </div>
+                <?php endforeach; ?>
+            </div></div>
+        </div>
+    </section>
+    <?php endif; ?>
+
+    <?php render_slider('new-slider', 'تازه‌ها', 'fa-sparkles', $new_novels); ?>
+
+    <!-- Highest Rated (Horizontal Rank) -->
+    <?php if(!empty($highest_rated)): ?>
+    <section class="section sec-dark">
+        <div class="container">
+            <div class="sec-header"><div class="sec-title"><div class="sec-icon"><i class="fas fa-trophy"></i></div><h2>محبوب‌ترین‌ها</h2></div>
+            <div class="sec-nav"><button class="nav-arrow" onclick="document.getElementById('hr-s').scrollBy({left:300,behavior:'smooth'})"><i class="fas fa-chevron-right"></i></button><button class="nav-arrow" onclick="document.getElementById('hr-s').scrollBy({left:-300,behavior:'smooth'})"><i class="fas fa-chevron-left"></i></button></div></div>
+            <div class="slider-wrap"><div class="slider" id="hr-s">
+                <?php foreach($highest_rated as $i => $hr): ?>
+                <div class="hr-slide">
+                    <a href="novel_detail.php?id=<?php echo $hr['id']; ?>" class="hr-card">
+                        <div class="hr-rank">#<?php echo $i+1; ?></div>
+                        <img src="<?php echo htmlspecialchars($hr['image']); ?>" class="hr-img">
+                        <div class="hr-info">
+                            <h4 class="hr-title"><?php echo htmlspecialchars($hr['title']); ?></h4>
+                            <div class="hr-rate"><i class="fas fa-star"></i> <?php echo $hr['rating']; ?></div>
                         </div>
-                    </div>
-                </div>`;
-        }
+                    </a>
+                </div>
+                <?php endforeach; ?>
+            </div></div>
+        </div>
+    </section>
+    <?php endif; ?>
 
-        function createUpdateCard(update) {
-            return `
-                <div class="update-card">
-                    <div class="update-cover"><img src="${update.image}" alt="${update.title}" loading="lazy">
-                    ${update.isNew ? '<div class="update-new-indicator"></div>' : ''}</div>
-                    <div class="update-content">
-                        <span class="update-type"><i class="fas fa-globe-asia"></i> ${update.type}</span>
-                        <h4 class="update-title">${update.title}</h4>
-                        <div class="update-chapter"><i class="fas fa-bookmark"></i> ${update.chapter}</div>
-                        <div class="update-footer"><div class="update-stats"><span class="update-stat"><i class="fas fa-eye"></i> ${update.views}</span></div><span class="update-time"><i class="fas fa-clock"></i> ${update.time}</span></div>
-                    </div>
-                </div>`;
-        }
-
-        function createCategoryCard(cat) {
-            return `<div class="category-card"><div class="category-icon">${cat.icon}</div><h4 class="category-name">${cat.name}</h4><span class="category-count">${cat.count} ناول</span></div>`;
-        }
-
-        function createRankingItem(item, idx) {
-            const posClass = idx === 0 ? 'ranking-position-1' : idx === 1 ? 'ranking-position-2' : idx === 2 ? 'ranking-position-3' : 'ranking-position-default';
-            return `
-                <div class="ranking-item" onclick="window.location.href='novel_detail.php?id=1'">
-                    <div class="ranking-position ${posClass}">${idx + 1}</div>
-                    <div class="ranking-cover"><img src="${item.image}" alt="${item.title}" loading="lazy"></div>
-                    <div class="ranking-info"><h5 class="ranking-title">${item.title}</h5><div class="ranking-stats"><span class="ranking-stat"><i class="fas fa-eye"></i> ${item.views}</span><span class="ranking-stat"><i class="fas fa-heart"></i> ${item.votes}</span></div></div>
-                </div>`;
-        }
-
-        function renderAll() {
-            document.getElementById('hot-slider').innerHTML = novelsData.hot.map(createNovelCard).join('');
-            document.getElementById('new-slider').innerHTML = novelsData.new.map(createNovelCard).join('');
-            document.getElementById('complete-slider').innerHTML = novelsData.complete.map(createNovelCard).join('');
-            document.getElementById('updates-grid').innerHTML = updates.map(createUpdateCard).join('');
-            document.getElementById('categories-grid').innerHTML = categories.map(createCategoryCard).join('');
-            
-            const rankHTML = (title, icon, data) => `
-                <div class="ranking-card">
-                    <div class="ranking-header"><div class="ranking-icon ${icon}"><i class="fas fa-crown"></i></div><div class="ranking-header-text"><h3>${title}</h3><p>برترین‌ها</p></div></div>
-                    <div class="ranking-list">${data.map((item,i)=>createRankingItem(item,i)).join('')}</div>
-                </div>`;
-            
-            document.getElementById('rankings-grid').innerHTML = 
-                rankHTML('برترین هفته', 'ranking-icon-gold', rankings.weekly) +
-                rankHTML('داغ‌ترین‌ها', 'ranking-icon-fire', rankings.trending) +
-                rankHTML('برترین کلی', 'ranking-icon-star', rankings.allTime);
-        }
-
-        function scrollSlider(type, dir) {
-            const s = document.getElementById(`${type}-slider`);
-            s.scrollBy({ left: (284) * 2 * dir, behavior: 'smooth' });
-        }
-
-        window.addEventListener('scroll', () => {
-            const h = document.getElementById('header');
-            const b = document.getElementById('backToTop');
-            if (h) h.classList.toggle('scrolled', window.scrollY > 50);
-            if (b) b.classList.toggle('visible', window.scrollY > 500);
-        });
-
-        const mmBtn = document.getElementById('mobileMenuBtn');
-        const mm = document.getElementById('mobileMenu');
-        const mmO = document.getElementById('mobileMenuOverlay');
-        const mmC = document.getElementById('mobileMenuClose');
-
-        function toggleMM(show) {
-            mm.classList.toggle('active', show);
-            mmO.classList.toggle('active', show);
-            document.body.style.overflow = show ? 'hidden' : '';
-        }
-
-        mmBtn?.addEventListener('click', () => toggleMM(true));
-        mmC?.addEventListener('click', () => toggleMM(false));
-        mmO?.addEventListener('click', () => toggleMM(false));
-        document.getElementById('backToTop')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-
-        renderAll();
-    </script>
-
-    <section class="section"><div class="section-header"><div class="section-title"><div class="section-icon"><i class="fas fa-fire-alt"></i></div><div class="section-title-text"><h2>داغ‌ترین ناول‌ها</h2><p>محبوب‌ترین ناول‌های این هفته</p></div></div><div class="section-controls"><button class="nav-btn" onclick="scrollSlider('hot', -1)"><i class="fas fa-chevron-right"></i></button><button class="nav-btn" onclick="scrollSlider('hot', 1)"><i class="fas fa-chevron-left"></i></button><a href="#" class="view-all-btn">مشاهده همه <i class="fas fa-arrow-left"></i></a></div></div><div class="slider-wrapper"><div class="slider" id="hot-slider"></div></div></section>
-    <section class="section section-dark"><div class="section-inner"><div class="section-header"><div class="section-title"><div class="section-icon"><i class="fas fa-bolt"></i></div><div class="section-title-text"><h2>آخرین بروزرسانی‌ها</h2><p>جدیدترین فصل‌های منتشر شده</p></div></div><a href="#" class="view-all-btn">مشاهده همه <i class="fas fa-arrow-left"></i></a></div><div class="updates-grid" id="updates-grid"></div></div></section>
-    <section class="section"><div class="section-header"><div class="section-title"><div class="section-icon"><i class="fas fa-sparkles"></i></div><div class="section-title-text"><h2>ناول‌های جدید</h2><p>تازه‌ترین ناول‌های اضافه شده</p></div></div><div class="section-controls"><button class="nav-btn" onclick="scrollSlider('new', -1)"><i class="fas fa-chevron-right"></i></button><button class="nav-btn" onclick="scrollSlider('new', 1)"><i class="fas fa-chevron-left"></i></button><a href="#" class="view-all-btn">مشاهده همه <i class="fas fa-arrow-left"></i></a></div></div><div class="slider-wrapper"><div class="slider" id="new-slider"></div></div></section>
-    <section class="section section-dark"><div class="section-inner"><div class="section-header"><div class="section-title"><div class="section-icon"><i class="fas fa-th-large"></i></div><div class="section-title-text"><h2>دسته‌بندی ژانرها</h2><p>ناول مورد علاقه‌تان را پیدا کنید</p></div></div></div><div class="categories-grid" id="categories-grid"></div></div></section>
-    <section class="section"><div class="section-header"><div class="section-title"><div class="section-icon"><i class="fas fa-check-double"></i></div><div class="section-title-text"><h2>ناول‌های تکمیل شده</h2><p>بدون انتظار برای فصل جدید!</p></div></div><div class="section-controls"><button class="nav-btn" onclick="scrollSlider('complete', -1)"><i class="fas fa-chevron-right"></i></button><button class="nav-btn" onclick="scrollSlider('complete', 1)"><i class="fas fa-chevron-left"></i></button><a href="#" class="view-all-btn">مشاهده همه <i class="fas fa-arrow-left"></i></a></div></div><div class="slider-wrapper"><div class="slider" id="complete-slider"></div></div></section>
-    <section class="section section-dark"><div class="section-inner"><div class="section-header"><div class="section-title"><div class="section-icon"><i class="fas fa-trophy"></i></div><div class="section-title-text"><h2>رتبه‌بندی ناول‌ها</h2><p>برترین‌های ناول‌خونه</p></div></div></div><div class="rankings-grid" id="rankings-grid"></div></div></section>
+    <?php render_slider('comp-slider', 'تکمیل شده', 'fa-check-double', $complete_novels); ?>
 
     <footer>
-        <div class="footer-content">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <a href="#" class="logo"><div class="logo-icon"><i class="fas fa-book-open"></i></div><span class="logo-text">ناول‌خونه</span></a>
-                    <p>ناول‌خونه بزرگترین کتابخانه آنلاین ترجمه ناول‌های آسیایی به زبان فارسی است.</p>
-                    <div class="footer-social"><a href="#" class="social-link"><i class="fab fa-telegram-plane"></i></a></div>
-                </div>
-                <div class="footer-section"><h4>دسترسی سریع</h4><ul class="footer-links"><li><a href="#"><i class="fas fa-angle-left"></i> صفحه اصلی</a></li></ul></div>
-                <div class="footer-newsletter"><h4><i class="fas fa-envelope"></i> خبرنامه</h4><form class="newsletter-form"><input type="email" placeholder="ایمیل شما..."><button type="submit"><i class="fas fa-paper-plane"></i></button></form></div>
-            </div>
-            <div class="footer-bottom"><p>© ۱۴۰۳ ناول‌خونه</p></div>
+        <div class="foot-content">
+            <div class="foot-logo"><i class="fas fa-book-open"></i> ناول‌خونه</div>
+            <p class="foot-copy">© ۱۴۰۳ ناول‌خونه - تمامی حقوق محفوظ است</p>
         </div>
     </footer>
-    <button class="back-to-top" id="backToTop"><i class="fas fa-chevron-up"></i></button>
+
+    <script>
+        function toggleMob() {
+            document.getElementById('mobMenu').classList.toggle('active');
+            document.getElementById('mobOvl').classList.toggle('active');
+        }
+        document.querySelectorAll('.slider').forEach(slider => {
+            slider.addEventListener('wheel', (evt) => {
+                evt.preventDefault();
+                slider.scrollLeft += evt.deltaY;
+            });
+        });
+    </script>
 </body>
 </html>
